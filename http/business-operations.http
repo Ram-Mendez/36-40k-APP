@@ -1,0 +1,74 @@
+@baseUrl = http://localhost:8086
+
+### Login y variables (HTTP Client de IntelliJ)
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"operations","password":"DevPassword123!"}
+
+> {% client.global.set("accessToken", response.body.accessToken); client.global.set("refreshToken", response.body.refreshToken); %}
+
+### Clientes activos
+GET {{baseUrl}}/api/v1/customers?active=true&page=0&size=20&sort=name&direction=asc
+Authorization: Bearer {{accessToken}}
+
+### Catálogo
+GET {{baseUrl}}/api/v1/products?active=true&search=guantes
+Authorization: Bearer {{accessToken}}
+
+### Crear pedido (ids del seed inicial; adaptar si utilizas otros datos)
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"customerId":1}
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### Añadir o actualizar línea
+PUT {{baseUrl}}/api/v1/orders/{{orderId}}/lines/1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"quantity":2}
+
+### Confirmar y reservar
+POST {{baseUrl}}/api/v1/orders/{{orderId}}/confirm
+Authorization: Bearer {{accessToken}}
+X-Request-ID: manual-confirm-001
+
+### Reservas activas
+GET {{baseUrl}}/api/v1/inventory/reservations
+Authorization: Bearer {{accessToken}}
+
+### Completar (cotización HTTP y salida de existencias)
+POST {{baseUrl}}/api/v1/orders/{{orderId}}/complete
+Authorization: Bearer {{accessToken}}
+X-Request-ID: manual-complete-001
+
+### Consulta de estado
+GET {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{accessToken}}
+
+### Movimientos
+GET {{baseUrl}}/api/v1/inventory/movements?productId=1&page=0&size=20
+Authorization: Bearer {{accessToken}}
+
+### Ventas completadas
+GET {{baseUrl}}/api/v1/reports/sales?page=0&size=20
+Authorization: Bearer {{accessToken}}
+
+### Rotación (invalida el anterior access token)
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken":"{{refreshToken}}"}
+
+> {% client.global.set("accessToken", response.body.accessToken); client.global.set("refreshToken", response.body.refreshToken); %}
+
+### Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### Salud pública
+GET {{baseUrl}}/actuator/health

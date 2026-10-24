@@ -55,7 +55,6 @@ spec:
             limits:
               cpu: 500m
               memory: 640Mi
-          env:
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20"
           startupProbe:

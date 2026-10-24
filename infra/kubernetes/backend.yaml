@@ -48,6 +48,8 @@ spec:
                 secretKeyRef:
                   name: backend-secrets
                   key: admin-password
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20"
           resources:
             requests:
               cpu: 150m
@@ -55,8 +57,6 @@ spec:
             limits:
               cpu: 500m
               memory: 640Mi
-            - name: JAVA_TOOL_OPTIONS
-              value: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20"
           startupProbe:
             httpGet:
               path: /actuator/health/liveness

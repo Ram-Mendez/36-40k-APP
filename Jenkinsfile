@@ -13,7 +13,7 @@ pipeline {
         KIND_CLUSTER_NAME = 'backend-lab'
         KUBE_NAMESPACE = 'backend-lab'
         APP_IMAGE = "business-operations-backend:jenkins-${GITHUB_RUN_ID}"
-        PATH+CONTAINER_TOOLS = '/usr/local/bin:/usr/bin:/bin'
+        PATH = "/usr/local/bin:/usr/bin:/bin:${env.PATH}"
     }
 
     stages {

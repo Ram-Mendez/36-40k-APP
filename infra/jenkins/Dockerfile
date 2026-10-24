@@ -2,7 +2,7 @@ FROM jenkins/jenkins:lts-jdk21
 
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl docker.io git jq openssl \
+    && apt-get install -y --no-install-recommends ca-certificates curl docker.io docker-cli git jq openssl \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /workspace@tmp \
     && chmod 1777 /workspace@tmp \

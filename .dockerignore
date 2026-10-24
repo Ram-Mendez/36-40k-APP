@@ -1,6 +1,9 @@
 .git
 .idea
 target
+!target/
+target/*
+!target/business-operations-backend-1.0.0.jar
 dist
 logs
 .env

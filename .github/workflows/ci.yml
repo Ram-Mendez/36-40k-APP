@@ -1,30 +1,80 @@
-name: Java 21 verification
+name: Backend lab with Jenkins and Kind
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      failure_simulation:
+        description: Optional controlled failure to study the rollout evidence
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - image-pull
 permissions:
   contents: read
 jobs:
-  verify:
+  jenkins-kind-lab:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
+    env:
+      LAB_FAILURE_SIMULATION: ${{ inputs.failure_simulation || 'none' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Unit, PostgreSQL integration and concurrency tests
-        run: bash ./mvnw -B -ntp clean verify
-      - name: Upload test evidence
+      - name: Install pinned Kind and kubectl clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          KIND_VERSION=v0.33.0
+          KUBECTL_VERSION=v1.34.0
+          curl -fsSLo /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          curl -fsSLo /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          sudo install -m 0755 /tmp/kind /usr/local/bin/kind
+          sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+          kind version
+          kubectl version --client
+      - name: Create temporary Kind cluster
+        run: kind create cluster --name backend-lab --image kindest/node:v1.34.0 --wait 120s
+      - name: Run Jenkins and its real Jenkinsfile pipeline
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.head_ref || github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash ./scripts/run-github-jenkins.sh
+      - name: Capture temporary Jenkins output
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p evidence
+          docker logs backend-lab-jenkins > evidence/jenkins-container.log 2>&1 || true
+      - name: Clean temporary Kubernetes and Jenkins resources
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p evidence
+          kubectl delete namespace backend-lab --wait=true --timeout=60s > evidence/kubernetes-cleanup.log 2>&1 || true
+          kind delete cluster --name backend-lab >> evidence/kubernetes-cleanup.log 2>&1 || true
+          docker rm --force backend-lab-jenkins >> evidence/kubernetes-cleanup.log 2>&1 || true
+          docker image rm "backend-lab-jenkins:${GITHUB_RUN_ID}" >> evidence/kubernetes-cleanup.log 2>&1 || true
+          docker image rm "business-operations-backend:jenkins-${GITHUB_RUN_ID}" >> evidence/kubernetes-cleanup.log 2>&1 || true
+          printf 'kind_cluster_deleted=true\njenkins_container_removed=true\n' > evidence/cleanup.txt
+      - name: Upload test, rollout, smoke and log evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: backend-lab-evidence
+          retention-days: 1
           path: |
+            evidence
             target/surefire-reports
             target/failsafe-reports
             target/site/jacoco
-      - name: Build container
-        run: docker build -t business-operations-backend:ci .
+          if-no-files-found: warn

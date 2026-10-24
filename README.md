@@ -62,7 +62,7 @@ Con Java 21 y Docker Desktop funcionando:
 
 El build exige Java 21. Surefire ejecuta unitarias y pruebas del cliente HTTP; Failsafe ejecuta `*IntegrationTest` con Testcontainers y PostgreSQL real. No usa H2 ni omite las integraciones si falta Docker. Informes en `target/surefire-reports`, `target/failsafe-reports` y `target/site/jacoco/index.html`. El testcontainer tiene base y puerto independientes del Compose.
 
-Resultados realmente ejecutados: [docs/VERIFICATION.md](docs/VERIFICATION.md). Pipeline: [.github/workflows/ci.yml](.github/workflows/ci.yml).
+Resultados locales registrados: [docs/VERIFICATION.md](docs/VERIFICATION.md). El flujo temporal de GitHub Actions ejecuta un Jenkins real, construye y despliega en Kind y adjunta evidencias. Su recorrido y ejercicios están explicados en [docs/JENKINS-KIND-LAB.md](docs/JENKINS-KIND-LAB.md); la ejecución remota solo se considera validada cuando su run y artifacts estén disponibles.
 
 ## Trabajo en el sistema
 

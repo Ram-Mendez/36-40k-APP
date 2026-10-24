@@ -60,6 +60,8 @@ Si Swagger y el código difieren, comprobar puerto, proceso y artefacto realment
 
 Respaldar PostgreSQL con `pg_dump` antes de cambios de datos relevantes; probar restauración en una base aislada. Nunca corregir una migración aplicada: añadir otra. Flyway rechaza checksums incoherentes. Los volúmenes son persistentes; cambiar una contraseña en variables no cambia la contraseña de una base ya inicializada.
 
-## CI
+## CI y laboratorio temporal
 
-GitHub Actions compila y ejecuta Maven verify con Java 21 y Docker disponible, y conserva informes. El workflow se ejecuta al subir el repositorio a GitHub; una ejecución local no demuestra que Actions haya corrido. Las pruebas no necesitan secretos de producción. Antes de desplegar una versión, comprobar el resultado del pipeline y las migraciones nuevas.
+El workflow de GitHub Actions inicia Jenkins y Kind en un runner temporal. Jenkins ejecuta el `Jenkinsfile` versionado; su stage Test ejecuta `clean verify` una vez. Después empaqueta el mismo JAR, construye una imagen local, despliega PostgreSQL y Spring Boot, y comprueba readiness, autenticación y persistencia tras reiniciar la aplicación. Los resultados y logs se guardan como artifacts y el workflow elimina los recursos del runner al finalizar. Para estudiar cada herramienta y ejecutar un rollout fallido controlado, consulta [JENKINS-KIND-LAB.md](JENKINS-KIND-LAB.md).
+
+Una edición del workflow o la ejecución en un equipo local no demuestra que GitHub Actions haya corrido. Solo el enlace al run y sus artifacts verifican Jenkins, los pods y las pruebas en GitHub.

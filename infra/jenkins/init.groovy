@@ -1,8 +1,12 @@
 import jenkins.model.Jenkins
+import jenkins.model.JenkinsLocationConfiguration
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition
 import org.jenkinsci.plugins.workflow.job.WorkflowJob
 
 def jenkins = Jenkins.get()
+def location = JenkinsLocationConfiguration.get()
+location.setUrl('http://127.0.0.1:8080/')
+location.save()
 def pipelineFile = new File('/workspace/Jenkinsfile')
 if (!pipelineFile.isFile()) {
     throw new IllegalStateException('The checked-out Jenkinsfile is not mounted at /workspace/Jenkinsfile')

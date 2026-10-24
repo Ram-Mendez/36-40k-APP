@@ -135,6 +135,7 @@ pipeline {
                         customer_payload="$(jq -n --arg taxId "$tax_id" '{name:"Jenkins Kind smoke customer",taxId:$taxId,email:"jenkins-kind@example.test",address:"Madrid"}')"
                         customer_response="$(curl --silent --show-error --fail --header 'Content-Type: application/json' --header "Authorization: Bearer $access_token" --data "$customer_payload" http://127.0.0.1:18086/api/v1/customers)"
                         customer_id="$(jq -er '.id' <<< "$customer_response")"
+                        stored_tax_id="$(jq -er '.taxId' <<< "$customer_response")"
                         test -n "$customer_id"
 
                         kubectl -n "$KUBE_NAMESPACE" rollout restart deployment/backend-app
@@ -162,9 +163,9 @@ pipeline {
                           sleep 2
                         done
                         jq -e '.status == "UP"' /tmp/backend-readiness.json > /dev/null
-                        persisted_count="$(kubectl -n "$KUBE_NAMESPACE" exec deployment/postgres -- psql -U business -d business_operations -tAc "SELECT count(*) FROM customer WHERE tax_id='$tax_id'")"
+                        persisted_count="$(kubectl -n "$KUBE_NAMESPACE" exec deployment/postgres -- psql -U business -d business_operations -tAc "SELECT count(*) FROM customer WHERE tax_id='$stored_tax_id'")"
                         test "$persisted_count" -eq 1
-                        kubectl -n "$KUBE_NAMESPACE" exec deployment/postgres -- psql -U business -d business_operations -tAc "SELECT 'postgres=' || current_setting('server_version') || ', persisted_customer=' || count(*) FROM customer WHERE tax_id='$tax_id'" > "$EVIDENCE_DIR/postgres-persistence.txt"
+                        kubectl -n "$KUBE_NAMESPACE" exec deployment/postgres -- psql -U business -d business_operations -tAc "SELECT 'postgres=' || current_setting('server_version') || ', persisted_customer=' || count(*) FROM customer WHERE tax_id='$stored_tax_id'" > "$EVIDENCE_DIR/postgres-persistence.txt"
                         printf 'readiness=UP\nunauthorized_http=%s\nadmin_login=PASS\ncustomer_create=PASS\ncustomer_id=%s\npostgres_persisted_after_app_and_postgres_restart=%s\n' \\
                           "$unauthorized_status" "$customer_id" "$persisted_count" | tee "$EVIDENCE_DIR/smoke-results.txt"
                     '''

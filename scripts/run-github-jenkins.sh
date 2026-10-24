@@ -50,6 +50,7 @@ if [[ "$ready" != true ]]; then
 fi
 
 docker exec "$container_name" curl --fail --silent http://127.0.0.1:8080/jnlpJars/jenkins-cli.jar --output /tmp/jenkins-cli.jar
+docker exec "$container_name" docker --version
 docker exec "$container_name" java -jar /tmp/jenkins-cli.jar -s http://127.0.0.1:8080/ build backend-java-lab -s -v 2>&1 \
   | tee "$evidence_dir/jenkins-console.log"
 

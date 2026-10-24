@@ -50,11 +50,14 @@ spec:
                   key: admin-password
           resources:
             requests:
-              cpu: 200m
-              memory: 384Mi
+              cpu: 150m
+              memory: 256Mi
             limits:
-              cpu: 750m
-              memory: 768Mi
+              cpu: 500m
+              memory: 640Mi
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20"
           startupProbe:
             httpGet:
               path: /actuator/health/liveness

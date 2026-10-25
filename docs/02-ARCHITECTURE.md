@@ -1,6 +1,8 @@
 # Arquitectura y recorrido de una petición
 
-Monolito modular Java 21 / Spring Boot 3.5, desplegable como un JAR. Los paquetes se organizan por responsabilidad funcional: `security`, `customer`, `product`, `inventory`, `order`, `report`, `shipping`; `common` reúne errores, paginación, auditoría, OpenAPI y correlación HTTP.
+Monolito modular Java 21 / Spring Boot 3.5, desplegable como un JAR. Los paquetes se organizan por responsabilidad funcional:
+`security`, `customer`, `product`, `inventory`, `order`, `report`, `shipping`; `common`
+reúne errores, paginación, auditoría, OpenAPI y correlación HTTP.
 
 ```mermaid
 flowchart LR

@@ -14,9 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
-/**
- * Explicit first-run provisioning for an empty production database; never resets an existing user.
- */
 @Component
 @ConditionalOnProperty(prefix = "security.bootstrap", name = "enabled", havingValue = "true")
 public class BootstrapAdminInitializer implements ApplicationRunner {
@@ -25,7 +22,6 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
     private final AuditService audit;
     private final String username;
     private final String password;
-
     public BootstrapAdminInitializer(
             JdbcTemplate jdbc,
             PasswordEncoder encoder,
@@ -38,17 +34,19 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         this.username = username;
         this.password = password;
     }
-
     @Override
     @Transactional
     public void run(ApplicationArguments arguments) {
+        // Evita que dos instancias de la aplicación creen el administrador al mismo tiempo.
         jdbc.execute("SELECT pg_advisory_xact_lock(74100)");
         Long count = jdbc.queryForObject("SELECT count(*) FROM app_user", Long.class);
+        // El proceso solo aprovisiona la primera cuenta; nunca cambia usuarios existentes.
         if (count != null && count > 0) return;
         if (!username.matches("[a-zA-Z0-9._-]{3,80}"))
             throw new IllegalStateException(
                     "Set a valid BOOTSTRAP_ADMIN_USERNAME for initial provisioning");
         if (password.length() < 12
+                // BCrypt admite como máximo 72 bytes; UTF-8 puede usar varios bytes por carácter.
                 || password.getBytes(StandardCharsets.UTF_8).length > 72
                 || "DevPassword123!".equals(password)) {
             throw new IllegalStateException(
@@ -60,8 +58,11 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
                         "INSERT INTO app_user(username,password_hash,role) VALUES (?,?,'ADMIN')"
                             + " RETURNING id",
                         Long.class,
+                        // Guarda el usuario en minúsculas para mantener nombres normalizados.
                         username.toLowerCase(Locale.ROOT),
+                        // La base de datos recibe el hash de la contraseña, no la contraseña original.
                         encoder.encode(password));
+        // Deja trazabilidad del alta junto con el identificador de la cuenta creada.
         audit.record(
                 "ADMIN_BOOTSTRAPPED",
                 "USER",

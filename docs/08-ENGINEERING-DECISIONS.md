@@ -8,7 +8,9 @@ El objetivo es un backend empresarial de tamaño medio: operaciones coherentes, 
 
 | Decisión | Motivo y contrapartida |
 | --- | --- |
-| Monolito por funcionalidades | Un único despliegue y transacciones locales para un proceso estrechamente relacionado. |
+| Dos servicios con un núcleo modular | Núcleo transaccional para catálogo/pedidos/stock y cotizaciones en un proceso Spring Boot independiente; comunicación REST sin transacción distribuida. |
+| Shipping sin base de datos | Cotización pura con configuración propia; no necesita persistencia ni acceso a tablas del núcleo. |
+| Jenkins y Kind temporales | Práctica de CI/CD y Kubernetes en runners, sin servidor permanente. Usuario Jenkins fijo y autenticación obligatoria. |
 | Java 21 / Spring Boot 3.5 | Stack solicitado, ecosistema estable y pruebas integradas. |
 | JPA en maestros; JDBC en stock/informes | CRUD mantenible y SQL explícito donde los bloqueos/agregaciones importan. |
 | PostgreSQL en tests | Las restricciones, bloqueos y SQL reales no se validan sustituyendo el motor por H2. |
@@ -22,7 +24,7 @@ El objetivo es un backend empresarial de tamaño medio: operaciones coherentes, 
 
 ## Alternativas descartadas
 
-No se separa catálogo, pedidos y stock en microservicios: se perderían transacciones locales y aparecerían estados compensatorios innecesarios. No se añade Kafka/RabbitMQ, CQRS, event sourcing, Kubernetes, Terraform ni Redis. No se generan repositorios/interfaces/capas ceremoniales para cada operación. No hay frontend ni sistemas de IA.
+Catálogo, pedidos y stock permanecen juntos: separarlos exigiría diseñar consistencia distribuida para operaciones hoy atómicas. La cotización sí tiene un límite independiente y se ejecuta en otro servicio. Kubernetes se practica con Kind temporal. Kafka/RabbitMQ, CQRS, event sourcing, Terraform, Redis, gateway, Eureka y sagas no son necesarios para este alcance. No hay frontend ni sistemas de IA.
 
 La auditoría es un historial operativo, no un sistema de cumplimiento inmutable contra un administrador de base de datos. Los movimientos de inventario explican reservas y expediciones; no sustituyen contabilidad financiera.
 

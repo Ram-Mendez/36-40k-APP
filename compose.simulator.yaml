@@ -1,0 +1,10 @@
+# Optional fault exercises only. Normal Compose runs the Spring Boot shipping service.
+services:
+  shipping-service:
+    build:
+      context: ./infra/carrier
+      dockerfile: Dockerfile
+    environment:
+      CARRIER_MODE: ${CARRIER_MODE:-normal}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9096/health"]

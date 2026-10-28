@@ -2,4 +2,4 @@ spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/business_operations
 shipping:
-  base-url: http://carrier:9096
+  base-url: ${SHIPPING_BASE_URL:http://shipping-service:9096}

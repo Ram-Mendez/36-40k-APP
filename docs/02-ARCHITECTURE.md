@@ -1,9 +1,19 @@
 # Arquitectura y recorrido de una petición
 
-Monolito modular Java 21 / Spring Boot 3.5, desplegable como un JAR. Los paquetes se organizan por responsabilidad funcional: `security`, `customer`, `product`, `inventory`, `order`, `report`, `shipping`; `common` reúne errores, paginación, auditoría, OpenAPI y correlación HTTP.
+Dos aplicaciones Java 21 / Spring Boot 3.5, cada una con su JAR e imagen. El núcleo conserva paquetes por responsabilidad funcional: `security`, `customer`, `product`, `inventory`, `order`, `report`, `shipping`; `common` reúne errores, paginación, auditoría, OpenAPI y correlación HTTP. `services/shipping-service` es un servicio autónomo de cálculo de cotizaciones, sin acceso a PostgreSQL ni dependencia Java compartida con el núcleo.
 
 ```mermaid
-flowchart LR
+flowchart TD
+    Client["Cliente HTTP"] --> Core["Núcleo de operaciones · 8086"]
+    Core --> PG[("PostgreSQL · datos del núcleo")]
+    Core -->|"GET /quotes · REST + timeout"| Shipping["shipping-service · 9096"]
+    Shipping --> Pricing["Tarifa y umbral configurables"]
+```
+
+En Kubernetes, `backend-app` resuelve `shipping-service` mediante su Service interno. Cada aplicación tiene Deployment, probes, imagen y build propios. El presupuesto es puro; el resultado se guarda con el pedido en la transacción local del núcleo. El diagrama siguiente muestra el recorrido interno del núcleo:
+
+```mermaid
+flowchart TD
     Client[Cliente HTTP] --> Log[RequestLoggingFilter: requestId]
     Log --> Security[Spring Security: JWT y sesión vigente]
     Security --> MVC[Controller: DTO y validación]

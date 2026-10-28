@@ -15,29 +15,31 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-  carrier:
-    build: ./infra/carrier
-    environment:
-      CARRIER_MODE: ${CARRIER_MODE:-normal}
+  shipping-service:
+    build:
+      context: .
+      dockerfile: services/shipping-service/Dockerfile
     ports:
       - "127.0.0.1:9096:9096"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9096/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9096/actuator/health/readiness"]
       interval: 5s
       timeout: 3s
       retries: 20
+      start_period: 30s
   app:
     build: .
     environment:
       SPRING_PROFILES_ACTIVE: dev,container
       DB_PASSWORD: ${DB_PASSWORD:-business_dev_only}
       JWT_SECRET: ${JWT_SECRET:-development-only-jwt-key-change-before-production-2026}
+      SHIPPING_BASE_URL: http://shipping-service:9096
     ports:
       - "127.0.0.1:8086:8086"
     depends_on:
       postgres:
         condition: service_healthy
-      carrier:
+      shipping-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8086/actuator/health/readiness"]

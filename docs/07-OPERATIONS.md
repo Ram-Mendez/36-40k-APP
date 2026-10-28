@@ -7,7 +7,7 @@ Instalar JDK 21 y Docker Desktop, habilitar su motor Linux y abrir esta carpeta 
 Para ejecutar en IntelliJ, arrancar primero dependencias y crear una configuración Spring Boot para `com.acme.operations.BusinessOperationsApplication` con perfil activo `dev`. Usa puerto 8086, PostgreSQL en localhost:5436 y transporte localhost:9096. No ejecutar simultáneamente el contenedor app y esta configuración en el mismo puerto.
 
 ```powershell
-docker compose up -d --build postgres carrier
+docker compose up -d --build postgres shipping-service
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
@@ -36,7 +36,7 @@ Detener con `docker compose stop`; reanudar con `docker compose start`; reinicia
 | BOOTSTRAP_ADMIN_ENABLED | true solo para el primer aprovisionamiento de una base sin usuarios. |
 | BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD | Credenciales propias del administrador inicial; retirar tras aprovisionar. |
 
-Perfil `dev`: secretos de ejemplo y datos iniciales. Perfil `test`: Testcontainers y datos de prueba. Perfil `container`: DNS de Compose para PostgreSQL y carrier. El Compose combina `dev,container` porque es una distribución **local de demostración**, no una receta para producción.
+Perfil `dev`: secretos de ejemplo y datos iniciales. Perfil `test`: Testcontainers y datos de prueba. Perfil `container`: DNS de Compose para PostgreSQL y shipping-service. El Compose combina `dev,container` porque es una distribución **local de demostración**, no una receta para producción.
 
 En otro entorno establecer secretos propios, no activar dev, aplicar las migraciones de producción y aprovisionar el primer ADMIN con las variables BOOTSTRAP_ADMIN descritas en `05-SECURITY.md`. Una base inicial de producción no crea automáticamente usuarios conocidos. El README describe los comandos de uso inmediato.
 
@@ -44,13 +44,13 @@ En otro entorno establecer secretos propios, no activar dev, aplicar las migraci
 
 ```powershell
 docker compose logs --tail 200 app
-docker compose logs --tail 100 postgres carrier
+docker compose logs --tail 100 postgres shipping-service
 docker compose exec postgres psql -U business -d business_operations
 ```
 
 Cada petición devuelve `X-Request-ID`; puede enviarse uno con 1–64 caracteres alfanuméricos, guion o guion bajo. Buscar ese valor en logs y en `/api/v1/audit?requestId=...`. Los logs incluyen método, ruta, status, duración y rechazos de negocio. No incluyen bodies ni credenciales. Para SQL de comprobación consultar `03-DATABASE.md`.
 
-401: verificar expiración, refresh ya utilizado, logout y estado del usuario. 403: verificar el rol actual. 409 de stock: comparar físicas, reservadas y reservas, no aumentar saldo sin motivo de negocio. 503 de transporte: verificar health/logs carrier y conectividad; el pedido debe conservar reserva y puede reintentarse.
+401: verificar expiración, refresh ya utilizado, logout y estado del usuario. 403: verificar el rol actual. 409 de stock: comparar físicas, reservadas y reservas, no aumentar saldo sin motivo de negocio. 503 de transporte: verificar health/logs shipping-service y conectividad; el pedido debe conservar reserva y puede reintentarse.
 
 Si Swagger y el código difieren, comprobar puerto, proceso y artefacto realmente ejecutado antes de cambiar código. En Windows: `Get-NetTCPConnection -LocalPort 8086 -State Listen`, después identificar su PID con `Get-Process -Id ...`. Revisar también `docker compose ps`. Recompilar y reconstruir únicamente la instancia pertinente.
 
@@ -62,6 +62,6 @@ Respaldar PostgreSQL con `pg_dump` antes de cambios de datos relevantes; probar 
 
 ## CI y laboratorio temporal
 
-El workflow de GitHub Actions inicia Jenkins y Kind en un runner temporal. Jenkins ejecuta el `Jenkinsfile` versionado; su stage Test ejecuta `clean verify` una vez. Después empaqueta el mismo JAR, construye una imagen local, despliega PostgreSQL y Spring Boot, y comprueba readiness, autenticación y persistencia tras reiniciar la aplicación. Los resultados y logs se guardan como artifacts y el workflow elimina los recursos del runner al finalizar. Para estudiar cada herramienta y ejecutar un rollout fallido controlado, consulta [JENKINS-KIND-LAB.md](JENKINS-KIND-LAB.md).
+El workflow de GitHub Actions inicia Jenkins y Kind en un runner temporal. Jenkins ejecuta el `Jenkinsfile` versionado; su stage Test ejecuta `clean verify` una vez por servicio. Después empaqueta los dos JAR, construye dos imágenes locales, despliega PostgreSQL y ambos servicios Spring Boot, y comprueba readiness, autenticación, pedidos con cotización real, caída/recuperación de shipping y persistencia tras reiniciar la aplicación. Los resultados y logs se guardan como artifacts y el workflow elimina los recursos del runner al finalizar. Para estudiar cada herramienta y ejecutar un rollout fallido controlado, consulta [JENKINS-KIND-LAB.md](JENKINS-KIND-LAB.md).
 
 Una edición del workflow o la ejecución en un equipo local no demuestra que GitHub Actions haya corrido. Solo el enlace al run y sus artifacts verifican Jenkins, los pods y las pruebas en GitHub.

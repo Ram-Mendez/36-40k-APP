@@ -108,6 +108,12 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(
                         requests -> {
                             requests.requestMatchers(
+                                            "/",
+                                            "/index.html",
+                                            "/*.js",
+                                            "/*.css",
+                                            "/assets/**",
+                                            "/favicon.ico",
                                             "/api/v1/auth/login",
                                             "/api/v1/auth/refresh",
                                             "/actuator/health",

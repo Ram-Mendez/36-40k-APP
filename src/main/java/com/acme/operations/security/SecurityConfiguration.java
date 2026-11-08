@@ -140,10 +140,8 @@ public class SecurityConfiguration {
                             requests.requestMatchers(
                                             "/",
                                             "/index.html",
-                                            "/app.js",
-                                            "/styles.css",
-                                            "/**/*.js",
-                                            "/**/*.css",
+                                            "/*.js",
+                                            "/*.css",
                                             "/assets/**",
                                             "/favicon.ico",
                                             "/api/v1/auth/login",

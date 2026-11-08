@@ -97,7 +97,7 @@ Resultados locales registrados: [docs/VERIFICATION.md](docs/VERIFICATION.md). El
 
 ## Trabajo en el sistema
 
-La aplicación integrada está en main. Los ejercicios con fallos intencionados se conservan en las etiquetas jercicios/debug-v1 y jercicios/debug-v2. Para practicar la segunda versión en una carpeta aparte, ejecuta git worktree add --detach ../practica-v2 ejercicios/debug-v2.
+La aplicación integrada está en `main`. Los ejercicios con fallos intencionados se conservan en las etiquetas `ejercicios/debug-v1` y `ejercicios/debug-v2`. Para practicar la segunda versión en otra carpeta, ejecuta `git worktree add --detach ../practica-v2 ejercicios/debug-v2`.
 
 El [laboratorio guiado](docs/LEARNING-LAB.md) desarrolla los 19 tickets del
 [roadmap original de 80 horas](docs/WAREHOUSE-ROADMAP.md), con ejercicios sin soluciones,

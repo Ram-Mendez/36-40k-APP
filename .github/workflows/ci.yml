@@ -28,6 +28,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Check learning roadmap invariants
+        shell: pwsh
+        run: ./scripts/check-learning.ps1
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -71,7 +74,8 @@ jobs:
           docker image rm "backend-lab-jenkins:${GITHUB_RUN_ID}" >> evidence/kubernetes-cleanup.log 2>&1 || true
           docker image rm "business-operations-backend:jenkins-${GITHUB_RUN_ID}" >> evidence/kubernetes-cleanup.log 2>&1 || true
           docker image rm "shipping-service:jenkins-${GITHUB_RUN_ID}" >> evidence/kubernetes-cleanup.log 2>&1 || true
-          printf 'kind_cluster_deleted=true\njenkins_container_removed=true\n' > evidence/cleanup.txt
+          # These commands tolerate errors; record attempts, never unverified success.
+          printf 'kind_cluster_delete_attempted=true\njenkins_container_remove_attempted=true\ncleanup_verification=NOT_PERFORMED\n' > evidence/cleanup.txt
       - name: Upload test, rollout, smoke and log evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -76,6 +76,11 @@ Resultados locales registrados: [docs/VERIFICATION.md](docs/VERIFICATION.md). El
 
 ## Trabajo en el sistema
 
+El [laboratorio guiado](docs/LEARNING-LAB.md) desarrolla los 19 tickets del
+[roadmap original de 80 horas](docs/WAREHOUSE-ROADMAP.md), con ejercicios sin soluciones,
+recuperación activa y criterios de autonomía. Consulta el [estado auditado](docs/LEARNING-AUDIT.md)
+para distinguir pruebas locales, evidencia remota y comprobaciones pendientes.
+
 Lee en orden [negocio](docs/01-BUSINESS.md), [arquitectura](docs/02-ARCHITECTURE.md), [base de datos](docs/03-DATABASE.md), [flujos](docs/04-BUSINESS-FLOWS.md), [seguridad](docs/05-SECURITY.md), [testing](docs/06-TESTING.md), [operación](docs/07-OPERATIONS.md) y [decisiones](docs/08-ENGINEERING-DECISIONS.md).
 
 Las peticiones ejecutables están en [http/business-operations.http](http/business-operations.http). Los [15 tickets](work-items/README.md) se basan en el código entregado; los ejercicios de incidencias explican cómo reproducirlos de forma controlada. La versión principal conserva sus garantías transaccionales.

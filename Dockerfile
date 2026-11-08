@@ -12,7 +12,8 @@ FROM eclipse-temurin:21-jre-jammy AS runtime-base
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 EXPOSE 8086
-ENTRYPOINT ["java","-XX:MaxRAMPercentage=75.0","-jar","/app/app.jar"]
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"
+ENTRYPOINT ["java","-jar","/app/app.jar"]
 
 FROM runtime-base AS runtime-prebuilt
 COPY target/business-operations-backend-1.0.0.jar app.jar

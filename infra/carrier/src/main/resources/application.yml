@@ -1,0 +1,4 @@
+server:
+  port: 9096
+carrier:
+  mode: ${CARRIER_MODE:normal}

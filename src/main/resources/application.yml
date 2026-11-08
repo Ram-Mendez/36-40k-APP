@@ -22,6 +22,9 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+# Distingue DTO con el mismo nombre simple al generar los esquemas OpenAPI.
+springdoc:
+  use-fqn: true
 server:
   port: ${SERVER_PORT:8086}
   shutdown: graceful
@@ -33,7 +36,7 @@ security:
     enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
   jwt:
     secret: ${JWT_SECRET}
-    access-ttl: ${JWT_ACCESS_TTL:PT15M}
+    access-ttl: ${JWT_ACCESS_TTL:PT45M}
     refresh-ttl: ${JWT_REFRESH_TTL:P7D}
   swagger-enabled: ${SWAGGER_ENABLED:false}
 shipping:

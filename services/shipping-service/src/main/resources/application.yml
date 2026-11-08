@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: shipping-service
+  mvc:
+    problemdetails:
+      enabled: true
+server:
+  port: ${SERVER_PORT:9096}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+shipping:
+  pricing:
+    flat-cost: ${SHIPPING_FLAT_COST:7.50}
+    free-threshold: ${SHIPPING_FREE_THRESHOLD:200.00}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+logging:
+  pattern:
+    level: '%5p [requestId=%X{requestId:-none}]'

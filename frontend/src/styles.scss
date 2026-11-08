@@ -1,0 +1,49 @@
+@use 'styles/components';
+@use 'styles/screens';
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/assets/fonts/manrope-variable.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light;
+  --canvas: #f6f7f3;
+  --surface: #fff;
+  --ink: #25372d;
+  --muted: #7a837b;
+  --forest: #203e30;
+  --green: #4d7456;
+  --lime: #d6eea4;
+  --line: #e9ece5;
+  --soft: #f0f3eb;
+  --amber: #a27435;
+  --danger: #b34d4d;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font-size: 13px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; color: inherit; }
+button:disabled { cursor: not-allowed; opacity: .48; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+button { border: 0; background: none; }
+button, a { transition: background .16s, color .16s, box-shadow .16s, transform .16s; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid #98b87c; outline-offset: 4px; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-weight: 650; }
+a { color: inherit; }
+strong, b { font-weight: 650; }
+::selection { background: #d6eea4; color: #203e30; }
+.skip-link { position: fixed; top: -70px; left: 15px; z-index: 100; background: #fff; padding: 12px; }
+.skip-link:focus { top: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

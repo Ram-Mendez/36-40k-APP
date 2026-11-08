@@ -4,7 +4,15 @@ target
 !target/
 target/*
 !target/business-operations-backend-1.0.0.jar
+!services/shipping-service/target/
+services/shipping-service/target/*
+!services/shipping-service/target/shipping-service-1.0.0.jar
+evidence
 dist
 logs
 .env
 *.zip
+
+frontend/node_modules
+frontend/.angular
+frontend/dist

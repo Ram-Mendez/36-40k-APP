@@ -8,4 +8,4 @@ data:
   DB_URL: jdbc:postgresql://postgres:5432/business_operations
   DB_USER: business
   SERVER_PORT: "8086"
-  SHIPPING_BASE_URL: http://carrier:9096
+  SHIPPING_BASE_URL: http://shipping-service:9096

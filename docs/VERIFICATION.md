@@ -1,5 +1,38 @@
 # Verificación de la entrega
 
+## Unificación en 36-40k-APP — 5 de noviembre de 2026
+
+Se combinaron los cambios de `36-40k-SPRING` con el trabajo local de APP. El destino conserva el frontend Angular, sus recursos estáticos, los comentarios de estudio y el cliente HTTP declarativo. Incorpora `services/shipping-service`, las configuraciones Compose para Docker e IntelliJ y los cambios de infraestructura y documentación de SPRING. Los cambios quedan en el árbol de trabajo de APP.
+
+Las cinco correcciones quedan presentes: cancelar libera reservas sin consumir existencias; las páginas de pedidos no se solapan; los conflictos de integridad devuelven 409; una confirmación rechazada revierte reservas y movimientos; un fallo de cotización devuelve 503 sin completar el pedido.
+
+Comprobaciones ejecutadas con Java 21 y PostgreSQL real aislado mediante Testcontainers:
+
+```powershell
+.\mvnw.cmd -B -ntp verify
+.\mvnw.cmd -B -ntp -f services/shipping-service/pom.xml verify
+# Tras añadir dos regresiones específicas, se repitió toda la suite de negocio:
+.\mvnw.cmd -B -ntp '-Dit.test=BusinessIntegrationTest' test-compile failsafe:integration-test failsafe:verify
+```
+
+| Comprobación | Resultado |
+| --- | --- |
+| Núcleo: Surefire | 32 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Núcleo: BusinessIntegrationTest, incluida paginación y producto B inactivo | 32 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Núcleo: otras integraciones | 18 pruebas, 2 fallos, 0 errores, 0 omitidas |
+| Shipping: suite y empaquetado | BUILD SUCCESS; 24 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Compose: normal, IntelliJ y simulador | Las tres configuraciones pasan `docker compose config --quiet` |
+| Preservación | 37 archivos de frontend y 12 recursos estáticos idénticos a la copia previa; 1600 líneas de comentarios Java conservadas |
+
+El `verify` completo del núcleo terminó con BUILD FAILURE por dos fallos en archivos de seguridad que permanecen idénticos a los anteriores a la unificación:
+
+- `passwordChangeChecksOldSecretThenRevokesEverySession`: la prueba usa `/api/v1/auth/password`, pero el controlador local expone `/api/v1/auth/user`; recibió 404 en lugar de 401.
+- `userRoleChangesTakeEffectImmediatelyAndDeactivationRevokesSessions`: la petición omite `username`; la implementación local intenta guardarlo como null y recibe 409 en lugar de 200.
+
+La copia previa y los logs de esta integración están en `dist/unify-20261105-p6_n2gw7/` (fuera del seguimiento Git). Los informes XML quedan en los directorios habituales de Surefire/Failsafe. Los registros que siguen corresponden a entregas anteriores.
+
+## Registro anterior — 19 de octubre de 2026
+
 Fecha: **19 de octubre de 2026**, Windows 11, zona Europe/Madrid. Pruebas ejecutadas sobre los archivos entregados; no son resultados previstos ni ejemplos de salida.
 
 ## Build y suite automatizada

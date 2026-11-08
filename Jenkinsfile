@@ -13,6 +13,7 @@ pipeline {
         KIND_CLUSTER_NAME = 'backend-lab'
         KUBE_NAMESPACE = 'backend-lab'
         APP_IMAGE = "business-operations-backend:jenkins-${GITHUB_RUN_ID}"
+        SHIPPING_IMAGE = "shipping-service:jenkins-${GITHUB_RUN_ID}"
         PATH = "/usr/local/bin:/usr/bin:/bin:${env.PATH}"
     }
 
@@ -40,6 +41,7 @@ pipeline {
             steps {
                 dir('/workspace') {
                     sh 'bash ./mvnw -B -ntp clean verify'
+                    sh 'bash ./mvnw -B -ntp -f services/shipping-service/pom.xml clean verify'
                 }
             }
         }
@@ -52,6 +54,9 @@ pipeline {
                         jar=target/business-operations-backend-1.0.0.jar
                         test -s "$jar"
                         sha256sum "$jar" | tee "$EVIDENCE_DIR/package.sha256"
+                        shipping_jar=services/shipping-service/target/shipping-service-1.0.0.jar
+                        test -s "$shipping_jar"
+                        sha256sum "$shipping_jar" | tee "$EVIDENCE_DIR/shipping-package.sha256"
                     '''
                 }
             }
@@ -64,6 +69,8 @@ pipeline {
                         set -euo pipefail
                         docker build --build-arg BUILD_MODE=prebuilt --tag "$APP_IMAGE" .
                         docker image inspect "$APP_IMAGE" --format '{{.Id}}' | tee "$EVIDENCE_DIR/docker-image.txt"
+                        docker build --build-arg BUILD_MODE=prebuilt --file services/shipping-service/Dockerfile --tag "$SHIPPING_IMAGE" .
+                        docker image inspect "$SHIPPING_IMAGE" --format '{{.Id}}' | tee "$EVIDENCE_DIR/shipping-docker-image.txt"
                     '''
                 }
             }
@@ -92,6 +99,9 @@ pipeline {
                         kubectl apply -f infra/kubernetes/postgres.yaml
                         kubectl -n "$KUBE_NAMESPACE" rollout status deployment/postgres --timeout=180s
                         kind load docker-image "$APP_IMAGE" --name "$KIND_CLUSTER_NAME"
+                        kind load docker-image "$SHIPPING_IMAGE" --name "$KIND_CLUSTER_NAME"
+                        sed "s|shipping-service:ci|$SHIPPING_IMAGE|" infra/kubernetes/shipping.yaml | kubectl apply -f -
+                        kubectl -n "$KUBE_NAMESPACE" rollout status deployment/shipping-service --timeout=240s
                         image_for_deploy="$APP_IMAGE"
                         if [[ "${LAB_FAILURE_SIMULATION:-none}" == image-pull ]]; then
                           image_for_deploy="${APP_IMAGE}-missing"
@@ -138,6 +148,9 @@ pipeline {
                         stored_tax_id="$(jq -er '.taxId' <<< "$customer_response")"
                         test -n "$customer_id"
 
+                        BASE_URL=http://127.0.0.1:18086 ACCESS_TOKEN="$access_token" CUSTOMER_ID="$customer_id" \\
+                          bash ./scripts/smoke-microservices.sh
+
                         kubectl -n "$KUBE_NAMESPACE" rollout restart deployment/backend-app
                         kubectl -n "$KUBE_NAMESPACE" rollout status deployment/backend-app --timeout=240s
                         kill "$port_forward_pid" 2>/dev/null || true
@@ -183,9 +196,10 @@ pipeline {
                     kubectl -n "$KUBE_NAMESPACE" get all,pvc -o wide > "$EVIDENCE_DIR/final-kubernetes-resources.txt" 2>&1
                     kubectl -n "$KUBE_NAMESPACE" logs deployment/backend-app --all-containers=true --tail=500 > "$EVIDENCE_DIR/backend-app.log" 2>&1
                     kubectl -n "$KUBE_NAMESPACE" logs deployment/postgres --all-containers=true --tail=300 > "$EVIDENCE_DIR/postgres.log" 2>&1
+                    kubectl -n "$KUBE_NAMESPACE" logs deployment/shipping-service --all-containers=true --tail=300 > "$EVIDENCE_DIR/shipping-service.log" 2>&1
                     kubectl -n "$KUBE_NAMESPACE" get events --sort-by=.lastTimestamp > "$EVIDENCE_DIR/final-kubernetes-events.txt" 2>&1
                 '''
-                archiveArtifacts artifacts: 'target/surefire-reports/**,target/failsafe-reports/**,target/site/jacoco/**,evidence/**', allowEmptyArchive: true, fingerprint: true
+                archiveArtifacts artifacts: 'target/surefire-reports/**,target/failsafe-reports/**,target/site/jacoco/**,services/shipping-service/target/surefire-reports/**,evidence/**', allowEmptyArchive: true, fingerprint: true
             }
         }
     }

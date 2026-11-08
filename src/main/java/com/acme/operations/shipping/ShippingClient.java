@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
@@ -66,7 +67,7 @@ public class ShippingClient {
             // Recupera el identificador de trazabilidad de la petición actual.
             String requestId = MDC.get("requestId");
             // Spring envía los parámetros y convierte automáticamente el JSON en Quote.
-            Quote quote = client.quote(orderId, amount, requestId);
+            Quote quote = client.quote(orderId, amount.setScale(0, RoundingMode.HALF_UP), requestId);
             // Rechaza cotizaciones incompletas, referencias inválidas o importes fuera del formato admitido.
             if (quote == null
                     || quote.reference() == null

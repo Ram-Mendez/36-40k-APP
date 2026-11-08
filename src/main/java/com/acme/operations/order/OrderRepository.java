@@ -220,7 +220,7 @@ public class OrderRepository {
     private void recalculate(long id) {
         BigDecimal amount =
                 jdbc.queryForObject(
-                        "SELECT coalesce(sum(quantity*unit_price),0) FROM order_line WHERE"
+                        "SELECT coalesce(sum(DISTINCT quantity*unit_price),0) FROM order_line WHERE"
                             + " order_id=?",
                         BigDecimal.class,
                         id);

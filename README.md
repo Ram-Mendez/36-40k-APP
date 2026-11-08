@@ -1,5 +1,7 @@
 # business-operations-backend
 
+**Práctica V3.** [Guía de arranque y cinco tickets de soporte](PRACTICA-V3.md).
+
 Backend de operaciones B2B de una distribuidora: clientes, catálogo, inventario, reservas, pedidos, transporte y auditoría. Dos servicios Java 21 / Spring Boot 3.5.12 comunicados por REST: el núcleo de operaciones con PostgreSQL 16 y un servicio independiente de cotizaciones. El núcleo conserva sus módulos y transacciones locales; incluye el frontend Angular de `frontend/`.
 
 Esta carpeta, `36-40k-APP`, reúne el frontend, los comentarios de estudio, el servicio de envío independiente y las correcciones de los cinco ejercicios. Abre este `pom.xml` y el de `services/shipping-service` en IntelliJ.

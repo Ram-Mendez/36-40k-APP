@@ -56,8 +56,6 @@ public class OrderController {
 
     // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
     @GetMapping("/{id}")
-    // Spring Security permite consultas a ADMIN, OPERATIONS y READONLY.
-    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
     // Recupera el recurso por id; si falta, el servicio interrumpe el flujo con un error. El id lo toma Spring de la
     // ruta.
     public OrderDtos.Order get(@PathVariable long id) {

@@ -69,7 +69,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ProblemDetail> integrity(Exception e, HttpServletRequest request) {
         return response(
-                HttpStatus.CONFLICT,
+                HttpStatus.INTERNAL_SERVER_ERROR,
                 "DATA_CONFLICT",
                 "Duplicate value or database integrity conflict",
                 request);

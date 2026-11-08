@@ -210,7 +210,7 @@ public class OrderRepository {
                 jdbc.queryForObject(
                         "SELECT count(*) FROM sales_order o" + where, Long.class, args.toArray());
         args.add(size);
-        args.add((long) page * size);
+        args.add(Math.max(0L, (long) page * size - 1));
         var headers =
                 jdbc.query(
                         "SELECT o.*,c.name AS customer_name FROM sales_order o JOIN customer c ON"

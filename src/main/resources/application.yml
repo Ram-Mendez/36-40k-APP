@@ -22,6 +22,8 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+springdoc:
+  use-fqn: true
 server:
   port: ${SERVER_PORT:8086}
   shutdown: graceful

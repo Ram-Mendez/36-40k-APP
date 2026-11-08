@@ -38,6 +38,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
     public PageResponse<UserDtos.View> list(int page, int size, String query, Boolean active) {
         if (page < 0 || size < 1 || size > 100)
             throw new BusinessException(

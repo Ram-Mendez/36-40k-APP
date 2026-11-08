@@ -8,7 +8,7 @@ public final class UserDtos {
     private UserDtos() {}
 
     public record Create(
-            @NotBlank @Pattern(regexp = "[a-zA-Z0-9._-]{3,80}") String username,
+            @NotBlank @Pattern(regexp = "[a-zA-Z0-9-<>._]{3,80}") String username,
             @NotBlank @Size(min = 12, max = 72) String password,
             @NotNull Role role) {}
 

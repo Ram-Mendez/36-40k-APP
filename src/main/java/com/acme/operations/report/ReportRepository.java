@@ -59,28 +59,31 @@ public class ReportRepository {
     public PageResponse<ReportDtos.LowStock> lowStock(long threshold, int page, int size) {
         String from =
                 " FROM product p LEFT JOIN inventory_balance i ON i.product_id=p.id WHERE"
-                    + " p.active=true AND coalesce(i.on_hand,0)-coalesce(i.reserved,0)<=?";
+                        + " p.active=true AND coalesce(i.on_hand,0)-coalesce(i.reserved,0)<=?";
+
         long total = jdbc.queryForObject("SELECT count(*)" + from, Long.class, threshold);
-        var rows =
-                jdbc.query(
-                        "SELECT"
-                            + " p.id,p.sku,p.name,coalesce(i.on_hand,0),coalesce(i.reserved,0),(SELECT"
-                            + " count(*) FROM stock_reservation r WHERE r.product_id=p.id)"
-                                + from
-                                + " ORDER BY coalesce(i.on_hand,0)-coalesce(i.reserved,0),p.id"
-                                + " LIMIT ? OFFSET ?",
-                        (rs, n) ->
-                                new ReportDtos.LowStock(
-                                        rs.getLong(1),
-                                        rs.getString(2),
-                                        rs.getString(3),
-                                        rs.getLong(4),
-                                        rs.getLong(5),
-                                        rs.getLong(4) - rs.getLong(5),
-                                        rs.getLong(6)),
-                        threshold,
-                        size,
-                        (long) page * size);
+
+        var rows = jdbc.query(
+                "SELECT"
+                        + " p.id, p.sku, p.name,"
+                        + " coalesce(i.on_hand, 0),"
+                        + " coalesce(i.reserved, 0),"
+                        + " (SELECT count(*) FROM stock_reservation sr WHERE sr.product_id = p.id)"
+                        + from
+                        + " ORDER BY coalesce(i.on_hand,0)-coalesce(i.reserved,0), p.id"
+                        + " LIMIT ? OFFSET ?",
+                (rs, n) -> new ReportDtos.LowStock(
+                        rs.getLong(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getLong(4),
+                        rs.getLong(5),
+                        rs.getLong(4) - rs.getLong(5),
+                        rs.getLong(6)),
+                threshold,
+                size,
+                (long) page * size);
+
         return new PageResponse<>(rows, page, size, total, (int) ((total + size - 1) / size));
     }
 }

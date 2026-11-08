@@ -105,7 +105,7 @@ public class OrderService {
         return repository.get(id);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public OrderDtos.Order confirm(long id) {
         var order = repository.header(id, true);
@@ -137,7 +137,7 @@ public class OrderService {
             throw transitionError(order.status(), "CANCELLED");
         if (order.status().equals("CONFIRMED"))
             for (var line : repository.lines(id))
-                inventory.release(id, line.productId(), line.quantity(), false);
+                inventory.release(id, line.productId(), line.quantity(), true);
         repository.transition(id, "CANCELLED", null, null);
         audit.record("ORDER_CANCELLED", "ORDER", Long.toString(id), "Reservations released");
         return repository.get(id);

@@ -94,6 +94,21 @@ public class OrderRepository {
                 lines);
     }
 
+    public void requireActiveProduct(long id) {
+        List<Boolean> activeRows =
+                jdbc.queryForList(
+                        "SELECT active FROM product WHERE id=? FOR SHARE",
+                        Boolean.class,
+                        id);
+
+        if (activeRows.isEmpty() || !Boolean.TRUE.equals(activeRows.get(0))) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "PRODUCT_UNAVAILABLE",
+                    "Product is missing or inactive");
+        }
+    }
+
     public void requireActiveCustomer(long id) {
         var matches =
                 jdbc.queryForList(

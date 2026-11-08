@@ -46,10 +46,11 @@ El smoke crea un producto, existencias y pedidos propios; verifica el ciclo comp
 1. **File → Open → selecciona `pom.xml` → Open as Project**. Acepta importar Maven.
 2. **File → Project Structure → Project SDK: JDK 21**. Puedes usar Download JDK → Eclipse Temurin → 21. Language level: 21.
 3. **Settings → Build, Execution, Deployment → Build Tools → Maven → Maven home path: Wrapper**; en Runner e Importing selecciona JDK 21.
-4. Arranca únicamente dependencias: `docker compose up -d --build --wait postgres shipping-service`. Si el servicio app estaba iniciado, detenlo con `docker compose stop app` para liberar 8086.
-5. Ejecuta `BusinessOperationsApplication` con **Active profiles: dev**. En Community, añade `--spring.profiles.active=dev` a Program arguments. La configuración del perfil contiene los valores locales documentados.
+4. Para ejecutar ambas aplicaciones en IntelliJ, inicia solo PostgreSQL: `docker compose -f compose.yaml -f compose.intellij.yaml up -d --wait`. Esta configuración deja `app` y `shipping-service` fuera del arranque automático. Si estaban ejecutándose en Docker, detenlos con `docker compose stop app shipping-service`.
+5. Importa también `services/shipping-service/pom.xml` como proyecto Maven y ejecuta `ShippingApplication` (9096).
+6. Ejecuta `BusinessOperationsApplication` con **Active profiles: dev**. En Community, añade `--spring.profiles.active=dev` a Program arguments. La configuración del perfil contiene los valores locales documentados.
 
-Alternativa PowerShell (ajusta únicamente la ruta del JDK si es distinta):
+Alternativa PowerShell con Shipping en Docker y solo el backend local (ajusta únicamente la ruta del JDK si es distinta):
 
 ```powershell
 $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot'

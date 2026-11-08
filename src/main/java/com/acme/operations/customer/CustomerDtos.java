@@ -7,7 +7,7 @@ public final class CustomerDtos {
 
     public record Input(
             @NotBlank @Size(max = 200) String name,
-            @NotBlank @Pattern(regexp = "[A-Za-z0-9-]{5,32}") String taxId,
+            @NotBlank @Pattern(regexp = "[A-Za-z0-9-<>-]{5,32}") String taxId,
             @NotBlank @Email @Size(max = 254) String email,
             @NotBlank @Size(max = 500) String address,
             @PositiveOrZero Long version) {}

@@ -4,7 +4,9 @@
 
 Instalar JDK 21 y Docker Desktop, habilitar su motor Linux y abrir esta carpeta seleccionando `pom.xml` como proyecto Maven en IntelliJ. Configurar Project SDK, Language level y Maven Runner JRE a Java 21; usar el Maven Wrapper del proyecto. Importar Maven y esperar a resolver dependencias.
 
-Para ejecutar en IntelliJ, arrancar primero dependencias y crear una configuración Spring Boot para `com.acme.operations.BusinessOperationsApplication` con perfil activo `dev`. Usa puerto 8086, PostgreSQL en localhost:5436 y transporte localhost:9096. No ejecutar simultáneamente el contenedor app y esta configuración en el mismo puerto.
+Para ejecutar **ambas aplicaciones en IntelliJ**, usar `docker compose -f compose.yaml -f compose.intellij.yaml up -d --wait`: solo arranca PostgreSQL (5436). Ejecutar `ShippingApplication` (9096) y `BusinessOperationsApplication` con perfil `dev` (8086). Si `app` o `shipping-service` estaban ejecutándose en Docker, detenerlos antes con `docker compose stop app shipping-service`. El antiguo contenedor `business-operations-carrier-1` pertenece al montaje anterior y debe retirarse si todavía existe; no se necesita para este arranque.
+
+Como alternativa, para ejecutar solo el backend en IntelliJ y Shipping en Docker, arrancar primero dependencias y crear una configuración Spring Boot para `com.acme.operations.BusinessOperationsApplication` con perfil activo `dev`. Usa puerto 8086, PostgreSQL en localhost:5436 y transporte localhost:9096. No ejecutar simultáneamente el contenedor app y esta configuración en el mismo puerto.
 
 ```powershell
 docker compose up -d --build postgres shipping-service

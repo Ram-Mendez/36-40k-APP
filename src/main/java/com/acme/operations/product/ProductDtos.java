@@ -8,7 +8,7 @@ public final class ProductDtos {
     private ProductDtos() {}
 
     public record Input(
-            @NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{2,64}") String sku,
+            @NotBlank @Pattern(regexp = "[A-Za-z0-9-<>_-]{2,64}") String sku,
             @NotBlank @Size(max = 200) String name,
             @NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal unitPrice,
             @PositiveOrZero Long version) {}

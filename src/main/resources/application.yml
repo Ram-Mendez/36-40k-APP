@@ -22,6 +22,9 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: true
+# Evita que Springdoc comparta un esquema entre UserDtos.Create y OrderDtos.Create.
+springdoc:
+  use-fqn: true
 server:
   port: ${SERVER_PORT:8086}
   shutdown: graceful

@@ -41,7 +41,7 @@ public class ProductService {
             int page, int size, String sort, String direction, String search, Boolean active) {
         // Valida tamaño, página y columnas permitidas antes de construir el Pageable.
         var pageable =
-                PageRequests.of(page, size, sort, direction, Set.of("id", "name", "unitPrice"));
+                PageRequests.of(page, size, sort, direction, Set.of("id", "name", "unitPrice", "active"));
         // Limita la longitud de búsqueda para mantener controlada la entrada.
         if (search != null && search.length() > 200)
             throw new BusinessException(

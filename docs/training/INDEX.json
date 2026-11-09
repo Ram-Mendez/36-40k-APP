@@ -60,8 +60,9 @@
       "notification": {
         "gmail_to": "rammendez95@gmail.com",
         "subject": "Laboratorio backend 36–40k — 2026-11-10",
-        "status": "PENDING",
-        "gmail_message_id": null
+        "status": "SENT",
+        "gmail_message_id": "1a1c296c1b6321bd",
+        "delivery_details": "Gmail send_email returned SENT, messageId 1a1c296c1b6321bd; recipient is the user"
       }
     }
   ]

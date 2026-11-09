@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "updated_on": "2026-11-10",
+  "repository": "Ram-Mendez/36-40k-APP",
+  "control_branch": "training/control",
+  "reference_corpus": {
+    "verified_external_projects": 3,
+    "target_exploratory": 1000,
+    "source": "docs/training/REFERENCE-CORPUS.md"
+  },
+  "user_previous_batch": {
+    "status": "UNKNOWN",
+    "known_remaining": "one reported outstanding issue",
+    "preserved": true
+  },
+  "batches": [
+    {
+      "date": "2026-11-10",
+      "baseline_sha": "a6bc8058415a21c3dc75564974e375e69bdab9a9",
+      "branches": {
+        "incidents": {
+          "branch": "training/2026-11-10/incidents",
+          "code_commit": "bcfd7035f0b82473649a3e11e33802122819066a",
+          "documentation_commit": "45ad067405c6e143f9f7b66f3061125045b4bd95"
+        },
+        "team_a": {
+          "branch": "training/2026-11-10/team-a",
+          "commit": "4a3f376b0aada3803471161301176f83b6b75070"
+        },
+        "team_b": {
+          "branch": "training/2026-11-10/team-b",
+          "commit": "2cd1fbd9354d0193ff09b8007496a56ddef2c89a"
+        }
+      },
+      "tickets": [
+        "LAB-20261110-01",
+        "LAB-20261110-02",
+        "LAB-20261110-03",
+        "LAB-20261110-04",
+        "LAB-20261110-05"
+      ],
+      "extra": [
+        "CAT-20261110-A",
+        "GIT-20261110-01"
+      ],
+      "topic_fingerprints": [
+        "customer-active-filter",
+        "stock-movement-order",
+        "confirmed-order-sales-report",
+        "order-line-retry-idempotence",
+        "logout-session-revocation",
+        "catalog-sku-and-active-sort-merge"
+      ],
+      "documentation": "docs/training/2026-11-10/TICKETS.md",
+      "validation": "PUBLISHED_UNVALIDATED",
+      "validation_evidence": "docs/training/2026-11-10/VALIDATION.md",
+      "blocking_conditions": [
+        "No executable Maven/PostgreSQL/Docker environment exposed via GitHub connector; HTTP regressions and compilation unverified"
+      ],
+      "notification": {
+        "gmail_to": "rammendez95@gmail.com",
+        "subject": "Laboratorio backend 36–40k — 2026-11-10",
+        "status": "PENDING",
+        "gmail_message_id": null
+      }
+    }
+  ]
+}

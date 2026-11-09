@@ -192,10 +192,10 @@ public class OrderRepository {
 
     // Mantiene una línea por pedido y producto usando la clave única de esa pareja.
     public void setLine(long id, long productId, long quantity, BigDecimal currentPrice) {
-        // Si ya existe, solo reemplaza quantity; conserva el precio pactado originalmente.
+        // En el conflicto de clave única, la línea conserva su precio pactado.
         jdbc.update(
                 "INSERT INTO order_line(order_id,product_id,quantity,unit_price) VALUES (?,?,?,?)"
-                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=excluded.quantity",
+                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=order_line.quantity+excluded.quantity",
                 id,
                 productId,
                 quantity,

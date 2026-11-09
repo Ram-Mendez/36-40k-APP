@@ -50,7 +50,7 @@ public class CustomerService {
                             var predicates = new ArrayList<Predicate>();
                             // Solo filtra por active cuando se envió ese parámetro.
                             if (active != null)
-                                predicates.add(cb.equal(root.get("active"), active));
+                                predicates.add(cb.notEqual(root.get("active"), active));
                             // Una búsqueda no vacía añade una comparación parcial sin distinguir mayúsculas.
                             if (search != null && !search.isBlank()) {
                                 // Escapa los comodines para buscar el texto literalmente dentro de nombre o taxId.

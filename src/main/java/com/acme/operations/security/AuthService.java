@@ -243,14 +243,17 @@ public class AuthService {
                     // Bloquea al usuario antes de mutar sus sesiones, igual que refresh y administración.
                     jdbc.queryForObject(
                             "SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, userId);
-                    // Obtiene la familia para cerrar también sus sesiones relacionadas.
+                    // Obtiene el identificador de la familia de sesiones.
                     var family =
                             jdbc.queryForObject(
                                     "SELECT family_id FROM auth_session WHERE id=?",
                                     UUID.class,
                                     UUID.fromString(sessionId));
-                    // Revoca esa familia; no elimina el historial de sesiones.
-                    revokeFamily(family);
+                    // Actualiza las sesiones asociadas y conserva su historial.
+                    jdbc.update(
+                             "UPDATE auth_session SET revoked_at=coalesce(revoked_at,current_timestamp)"
+                                 + " WHERE family_id=? AND used_at IS NOT NULL",
+                             family);
                     // Deja registro del cierre dentro de la misma transacción.
                     audit.record("LOGOUT", "SESSION", sessionId, "Session family revoked");
                 });

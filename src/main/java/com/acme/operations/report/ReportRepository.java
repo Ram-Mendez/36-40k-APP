@@ -25,8 +25,8 @@ public class ReportRepository {
     // Agrega ventas por cliente; no lista cada pedido individualmente.
     public PageResponse<ReportDtos.CustomerSales> sales(
             Instant from, Instant to, int page, int size) {
-        // Solo cuenta pedidos COMPLETED, porque un confirmado todavía puede cancelarse.
-        StringBuilder filter = new StringBuilder(" WHERE o.status='COMPLETED'");
+        // Selecciona los estados que se tienen en cuenta para la consulta de ventas.
+        StringBuilder filter = new StringBuilder(" WHERE o.status IN ('COMPLETED','CONFIRMED')");
         // Los parámetros se acumulan en el orden de los ? del filtro.
         List<Object> args = new ArrayList<>();
         // El límite inicial se incluye mediante >= y se convierte a timestamp SQL.

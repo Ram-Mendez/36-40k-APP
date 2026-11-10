@@ -144,7 +144,7 @@ public class BillingRepository {
     public PageResponse<BillingDtos.Entry> entries(long invoiceId, int page, int size) {
         long count = jdbc.queryForObject("SELECT count(*) FROM invoice_entry WHERE invoice_id=?",
                 Long.class, invoiceId);
-        var rows = jdbc.query("SELECT * FROM invoice_entry WHERE invoice_id=? ORDER BY id LIMIT ? OFFSET ?",
+        var rows = jdbc.query("SELECT * FROM invoice_entry WHERE invoice_id=? ORDER BY id DESC LIMIT ? OFFSET ?",
                 ENTRY, invoiceId, size, (long) page * size);
         return new PageResponse<>(rows, page, size, count, (int) ((count + size - 1) / size));
     }

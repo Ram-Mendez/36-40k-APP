@@ -152,7 +152,7 @@ public class ProcurementRepository {
             args.add(status);
         }
         if (dueBefore != null) {
-            where.append(" AND o.expected_on<?");
+            where.append(" AND o.expected_on<=?");
             args.add(dueBefore);
         }
         long count = jdbc.queryForObject("SELECT count(*) FROM purchase_order o" + where,

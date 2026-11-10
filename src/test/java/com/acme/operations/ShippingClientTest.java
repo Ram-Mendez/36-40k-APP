@@ -80,6 +80,16 @@ class ShippingClientTest {
         assertThat(query.get()).contains("orderId=1", "amount=10");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"199.60", "200.00"})
+    void sendsExactOrderAmountToShipping(String amount) throws Exception {
+        var client = client(200, "{\"reference\":\"C-123\",\"cost\":7.50}", 0);
+
+        client.quote(4, new BigDecimal(amount));
+
+        assertThat(query.get().split("&")).contains("amount=" + amount);
+    }
+
     @Test
     void forwardsRequestId() throws Exception {
         var client = client(200, "{\"reference\":\"C-123\",\"cost\":7.50}", 0);

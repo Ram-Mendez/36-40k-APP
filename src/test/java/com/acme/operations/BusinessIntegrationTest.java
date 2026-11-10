@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -71,13 +72,17 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
 
     // Crea un producto de prueba al precio indicado y devuelve su id.
     private long product(String price) throws Exception {
+        return product(unique("SKU"), unique("Product"), price);
+    }
+
+    private long product(String sku, String name, String price) throws Exception {
         return call(
                         post("/api/v1/products"),
                         Map.of(
                                 "sku",
-                                unique("SKU"),
+                                sku,
                                 "name",
-                                unique("Product"),
+                                name,
                                 "unitPrice",
                                 new BigDecimal(price)),
                         201)
@@ -243,6 +248,34 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
                 400);
     }
 
+    @Test
+    void catalogSearchTreatsSkuAndNamePunctuationLiterally() throws Exception {
+        // El prefijo único permite repetir el test sin encontrar productos de otras pruebas.
+        String prefix = unique("ETQ").toUpperCase(Locale.ROOT);
+        String sku = prefix + "_A";
+        String label = unique("Etiqueta");
+        product(sku, label + "-Azul grande", "10.00");
+        product(prefix + "XA", label + "-XAzul grande", "10.00");
+        product(prefix + "_XA", "Caja roja", "10.00");
+
+        // Las tres referencias comparten prefijo; la etiqueta completa solo identifica una.
+        assertThat(searchProducts(prefix).path("totalElements").asInt()).isEqualTo(3);
+        for (String query : List.of(sku, sku.toLowerCase(Locale.ROOT))) {
+            JsonNode page = searchProducts(query);
+            assertThat(page.path("totalElements").asInt()).as("Búsqueda de %s", query).isEqualTo(1);
+            assertThat(page.path("content").get(0).path("sku").asText()).isEqualTo(sku);
+        }
+
+        // Buscar parte del nombre sigue funcionando y respeta el texto a ambos lados del guion.
+        JsonNode byName = searchProducts(label + "-Azul");
+        assertThat(byName.path("totalElements").asInt()).isEqualTo(1);
+        assertThat(byName.path("content").get(0).path("sku").asText()).isEqualTo(sku);
+    }
+
+    private JsonNode searchProducts(String query) throws Exception {
+        return call(get("/api/v1/products").param("search", query), null, 200);
+    }
+
     // Busca un producto activo y comprueba filtros, orden y metadatos de paginación.
     @Test
     void productSearchCombinesPaginationAndActiveFilter() throws Exception {
@@ -283,6 +316,32 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
     void invalidPaginationAndSortAreRejected() throws Exception {
         call(get("/api/v1/products").param("size", "101"), null, 400);
         call(get("/api/v1/products").param("sort", "name;DROP TABLE product"), null, 400);
+    }
+
+    @Test
+    void orderTotalCountsBothLinesWhenTheirAmountsMatch() throws Exception {
+        // Dos productos distintos generan el mismo subtotal: 2 × 6 € y 3 × 4 €.
+        long firstProduct = product("6.00");
+        long secondProduct = product("4.00");
+        long orderId = order(customer(), firstProduct, 2);
+        String lineUrl = "/api/v1/orders/{id}/lines/{product}";
+
+        // El PUT debe devolver 24 € y un GET posterior debe recuperar ese mismo total.
+        JsonNode saved = call(put(lineUrl, orderId, secondProduct), Map.of("quantity", 3), 200);
+        assertThat(saved.path("lines").size()).isEqualTo(2);
+        assertThat(saved.path("total").decimalValue()).isEqualByComparingTo("24.00");
+        JsonNode fetched = call(get("/api/v1/orders/{id}", orderId), null, 200);
+        assertThat(fetched.path("total").decimalValue()).isEqualByComparingTo("24.00");
+
+        // Reemplazar la cantidad de la segunda línea deja 12 + 16 €.
+        JsonNode updated = call(put(lineUrl, orderId, secondProduct), Map.of("quantity", 4), 200);
+        assertThat(updated.path("total").decimalValue()).isEqualByComparingTo("28.00");
+
+        // Al eliminar esa línea, deben quedar la primera y sus 12 €.
+        JsonNode remaining = call(delete(lineUrl, orderId, secondProduct), null, 200);
+        assertThat(remaining.path("total").decimalValue()).isEqualByComparingTo("12.00");
+        assertThat(remaining.path("lines").size()).isEqualTo(1);
+        assertThat(remaining.path("lines").get(0).path("productId").asLong()).isEqualTo(firstProduct);
     }
 
     // El pedido conserva el precio pactado y recalcula su total al retirar una línea.
@@ -544,6 +603,36 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
                                 Long.class,
                                 product))
                 .isZero();
+    }
+
+    @Test
+    void withdrawalKeepsItsNegativeQuantityInMovementHistory() throws Exception {
+        // Partimos de un producto nuevo sin stock y registramos una entrada de 12 unidades.
+        long productId = product("10");
+        adjust(productId, 12);
+
+        // Enviamos la retirada por el mismo endpoint que en Swagger.
+        var adjustmentUrl = "/api/v1/inventory/{id}/adjustments";
+        call(post(adjustmentUrl, productId),
+                Map.of("quantity", -5, "reason", "Retirada por daños"), 204);
+
+        // Con 7 unidades disponibles, retirar otras 8 debe rechazarse sin crear un movimiento.
+        call(post(adjustmentUrl, productId),
+                Map.of("quantity", -8, "reason", "Retirada sin stock"), 409);
+        assertThat(balance(productId, "on_hand")).isEqualTo(7);
+
+        // Leemos el diario del producto. La API devuelve primero el movimiento más reciente.
+        JsonNode movements = call(
+                get("/api/v1/inventory/movements").param("productId", Long.toString(productId)),
+                null, 200).path("content");
+        assertThat(movements.size()).isEqualTo(2);
+        assertThat(movements.get(1).path("quantity").asLong()).isEqualTo(12);
+
+        // Esta aserción sobre la cantidad distingue una retirada de una segunda entrada.
+        JsonNode withdrawal = movements.get(0);
+        assertThat(withdrawal.path("reason").asText()).isEqualTo("Retirada por daños");
+        assertThat(withdrawal.path("productId").asLong()).isEqualTo(productId);
+        assertThat(withdrawal.path("quantity").asLong()).isEqualTo(-5);
     }
 
     // La consulta de inventario debe calcular disponible como físico menos reservado.

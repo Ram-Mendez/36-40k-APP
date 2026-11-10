@@ -71,7 +71,7 @@ public class InventoryService {
         repository.updateOnHand(productId, onHand);
         // Añade el movimiento ADJUSTMENT; orderId es null porque no procede de un pedido.
         repository.insertMovement(
-                productId, null, "ADJUSTMENT", Math.abs(request.quantity()), request.reason());
+                productId, null, "ADJUSTMENT",request.quantity(), request.reason());
         // Registra quién ajustó el stock; saldo, movimiento y auditoría comparten transacción.
         audit.record(
                 "STOCK_ADJUSTED",

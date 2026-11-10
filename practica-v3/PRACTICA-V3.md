@@ -4,15 +4,15 @@
 
 | Ticket | Cola | Incidencia |
 | --- | --- | --- |
-| [INC-011](practica-v3/INC-011.md) | Catálogo | La búsqueda de una referencia devuelve dos etiquetas |
-| [INC-012](practica-v3/INC-012.md) | Almacén | El diario de movimientos no cuadra con el recuento |
-| [INC-013](practica-v3/INC-013.md) | Pedidos | La cabecera del presupuesto suma menos que sus líneas |
-| [INC-014](practica-v3/INC-014.md) | Atención al cliente | Un usuario de consulta ve el pedido en la lista y recibe un 403 al abrirlo |
-| [INC-015](practica-v3/INC-015.md) | Expediciones | Al completar un pedido se aplica una tarifa distinta a la cotizada |
+| [INC-011](INC-011.md) | Catálogo | La búsqueda de una referencia devuelve dos etiquetas |
+| [INC-012](INC-012.md) | Almacén | El diario de movimientos no cuadra con el recuento |
+| [INC-013](INC-013.md) | Pedidos | La cabecera del presupuesto suma menos que sus líneas |
+| [INC-014](INC-014.md) | Atención al cliente | Un usuario de consulta ve el pedido en la lista y recibe un 403 al abrirlo |
+| [INC-015](INC-015.md) | Expediciones | Al completar un pedido se aplica una tarifa distinta a la cotizada |
 
 ## Arranque desde IntelliJ
 
-1. Abre la carpeta **36-40k-DEBUG-V3** y selecciona **JDK 21**. Carga el `pom.xml` raíz y el de `services/shipping-service` como proyectos Maven. Esta práctica tiene su propia base de datos.
+1. Abre la carpeta **36-40k-DEBUG-V3** y selecciona **JDK 21**. Carga el `../pom.xml` raíz y el de `services/shipping-service` como proyectos Maven. Esta práctica tiene su propia base de datos.
 2. Desde la terminal de esa carpeta, ejecuta `docker compose -f compose.autonomia.yaml up -d --wait`. En la ventana Database puedes conectarte a `localhost:25436/autonomia_v3`, usuario `business`, contraseña local `business_dev_only`.
 3. Ejecuta estas dos clases desde la copia V3 con los siguientes **Program arguments**. En ambos casos puedes usar **Debug**.
 

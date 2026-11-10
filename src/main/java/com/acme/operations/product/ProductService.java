@@ -65,6 +65,7 @@ public class ProductService {
                                                 + search.toLowerCase(Locale.ROOT)
                                                         .replace("!", "!!")
                                                         .replace("%", "!%")
+                                                        .replace("_", "!_%")
                                                 + "%";
                                 // Busca coincidencias en nombre o SKU; basta con que coincida uno de ellos.
                                 predicates.add(

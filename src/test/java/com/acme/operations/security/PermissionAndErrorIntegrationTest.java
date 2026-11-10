@@ -14,6 +14,26 @@ import java.util.List;
 
 // Comprueba permisos y respuestas HTTP con la aplicación y PostgreSQL de integración.
 class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
+    @Test
+    void readonlyCanOpenAnOrderFromTheList() throws Exception {
+        // Como en Swagger: iniciar sesión y listar los pedidos con el token de solo lectura.
+        String readonly = "Bearer " + token("readonly");
+        var list = mvc.perform(get("/api/v1/orders").param("size", "1").header("Authorization", readonly))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").isNumber())
+                .andReturn().getResponse();
+        long orderId = json(list.getContentAsString()).get("content").get(0).get("id").asLong();
+
+        // Abrir ese pedido con el mismo token. El bug devolvía 403 en este GET.
+        mvc.perform(get("/api/v1/orders/{id}", orderId).header("Authorization", readonly))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId));
+
+        // Sin token, la misma petición debe seguir requiriendo autenticación.
+        mvc.perform(get("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isUnauthorized());
+    }
+
     // Un método HTTP no soportado debe producir 405, no un error interno.
     @Test
     void unsupportedMethodReturns405InsteadOfServerError() throws Exception {

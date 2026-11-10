@@ -58,6 +58,7 @@ public class OrderController {
     @GetMapping("/{id}")
     // Recupera el recurso por id; si falta, el servicio interrumpe el flujo con un error. El id lo toma Spring de la
     // ruta.
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
     public OrderDtos.Order get(@PathVariable long id) {
         // Recupera el recurso por id; si falta, el servicio interrumpe el flujo con un error.
         return service.get(id);

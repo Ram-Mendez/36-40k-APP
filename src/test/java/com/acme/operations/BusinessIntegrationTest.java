@@ -369,6 +369,39 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
                 .isEqualByComparingTo("0");
     }
 
+    @Test
+    void repeatingLinePutPreservesQuantitiesPricesAndOrderTotal() throws Exception {
+        long productId = product("24.90");
+        long otherProductId = product("5.00");
+        long orderId = order(customer(), otherProductId, 1);
+        String orderUrl = "/api/v1/orders/{id}";
+        String lineUrl = orderUrl + "/lines/{productId}";
+        var quantity = Map.of("quantity", 3);
+        JsonNode otherLine = call(get(orderUrl, orderId), null, 200).path("lines").get(0);
+
+        call(put(lineUrl, orderId, productId), quantity, 200);
+        JsonNode first = call(get(orderUrl, orderId), null, 200);
+        assertThat(first.path("lines")).hasSize(2).contains(otherLine);
+        assertThat(first.path("lines"))
+                .filteredOn(line -> line.path("productId").asLong() == productId)
+                .singleElement()
+                .satisfies(line -> {
+                    assertThat(line.path("quantity").asLong()).isEqualTo(3);
+                    assertThat(line.path("unitPrice").decimalValue()).isEqualByComparingTo("24.90");
+                    assertThat(line.path("lineTotal").decimalValue()).isEqualByComparingTo("74.70");
+                });
+        assertThat(first.path("total").decimalValue()).isEqualByComparingTo("79.70");
+
+        // El catálogo cambia entre peticiones; la línea ya tiene su precio pactado.
+        jdbc.update("UPDATE product SET unit_price=30.00 WHERE id=?", productId);
+        call(put(lineUrl, orderId, productId), quantity, 200);
+        JsonNode retried = call(get(orderUrl, orderId), null, 200);
+        assertThat(retried.path("lines")).isEqualTo(first.path("lines"));
+        assertThat(retried.path("total").decimalValue()).isEqualByComparingTo("79.70");
+        assertThat(retried.path("status").asText()).isEqualTo("DRAFT");
+        assertThat(count("stock_reservation", orderId)).isZero();
+    }
+
     // Confirmar un pedido sin líneas debe fallar y no crear reservas.
     @Test
     void emptyOrderCannotBeConfirmed() throws Exception {
@@ -635,6 +668,26 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
         assertThat(withdrawal.path("quantity").asLong()).isEqualTo(-5);
     }
 
+    @Test
+    void movementHistoryReturnsNewestAdjustmentsFirstAcrossPages() throws Exception {
+        long productId = product("10.00");
+        for (String reason : List.of("LAB102-A", "LAB102-B", "LAB102-C")) {
+            call(post("/api/v1/inventory/{id}/adjustments", productId),
+                    Map.of("quantity", 1, "reason", reason), 204);
+        }
+
+        String url = "/api/v1/inventory/movements?productId={id}&page={page}&size=2";
+        JsonNode firstPage = call(get(url, productId, 0), null, 200);
+        JsonNode secondPage = call(get(url, productId, 1), null, 200);
+
+        assertThat(firstPage.path("totalElements").asInt()).isEqualTo(3);
+        assertThat(secondPage.path("totalElements").asInt()).isEqualTo(3);
+        assertThat(firstPage.path("content").findValuesAsText("reason"))
+                .containsExactly("LAB102-C", "LAB102-B");
+        assertThat(secondPage.path("content").findValuesAsText("reason"))
+                .containsExactly("LAB102-A");
+    }
+
     // La consulta de inventario debe calcular disponible como físico menos reservado.
     @Test
     void inventoryJoinReturnsCorrectAvailableBalance() throws Exception {
@@ -718,6 +771,31 @@ class BusinessIntegrationTest extends AbstractIntegrationTest {
                                 Long.class,
                                 product))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void salesReportCountsOrderOnlyAfterCompletion() throws Exception {
+        long customerId = customer();
+        long productId = product("24.90");
+        adjust(productId, 2);
+        long orderId = order(customerId, productId, 2);
+
+        JsonNode confirmed = call(post("/api/v1/orders/{id}/confirm", orderId), null, 200);
+        assertThat(confirmed.path("status").asText()).isEqualTo("CONFIRMED");
+        // La ventana empieza al confirmar este pedido para excluir ventas de pruebas anteriores.
+        String from = confirmed.get("updatedAt").asText();
+        JsonNode before = call(get("/api/v1/reports/sales").param("from", from), null, 200);
+        assertThat(before.path("totalElements").asLong()).isZero();
+        assertThat(before.path("content")).isEmpty();
+
+        call(post("/api/v1/orders/{id}/complete", orderId), null, 200);
+        JsonNode after = call(get("/api/v1/reports/sales").param("from", from), null, 200);
+        assertThat(after.path("totalElements").asLong()).isEqualTo(1);
+        assertThat(after.path("content")).hasSize(1);
+        JsonNode row = after.path("content").get(0);
+        assertThat(row.path("customerId").asLong()).isEqualTo(customerId);
+        assertThat(row.path("completedOrders").asLong()).isEqualTo(1);
+        assertThat(row.path("netSales").decimalValue()).isEqualByComparingTo("49.80");
     }
 
     // El informe de ventas agrupa solo pedidos completados dentro del intervalo de fechas.

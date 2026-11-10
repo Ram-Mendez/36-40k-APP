@@ -138,7 +138,7 @@ public class InventoryRepository {
         return new PageResponse<>(rows, page, size, count, (int) ((count + size - 1) / size));
     }
 
-    // Lista movimientos ya registrados, con los más recientes primero.
+    // Lista los movimientos registrados para una consulta paginada.
     public PageResponse<InventoryDtos.Movement> movements(Long productId, int page, int size) {
         // Reutiliza el mismo filtro en el conteo y en la consulta paginada.
         String where = productId == null ? "" : " WHERE product_id=?";

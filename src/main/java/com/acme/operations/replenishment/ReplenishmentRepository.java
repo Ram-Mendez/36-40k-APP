@@ -30,7 +30,7 @@ public class ReplenishmentRepository {
     // Aggregate pending purchases before joining product balances, so each product appears once.
     private static final String PROPOSAL_CTE = """
             WITH pending AS (
-                SELECT l.product_id, SUM(l.quantity-l.received_quantity) AS incoming
+                SELECT l.product_id, SUM(l.quantity) AS incoming
                 FROM purchase_order_line l
                 JOIN purchase_order o ON o.id=l.purchase_order_id
                 WHERE o.status IN ('SUBMITTED','PARTIALLY_RECEIVED')

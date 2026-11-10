@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_on": "2026-11-10",
+  "updated_on": "2026-11-11",
   "repository": "Ram-Mendez/36-40k-APP",
   "control_branch": "training/control",
   "reference_corpus": {
@@ -66,6 +66,62 @@
         "gmail_message_id": "1a1c296c1b6321bd",
         "delivery_details": "Gmail send_email returned SENT, messageId 1a1c296c1b6321bd; recipient is the user"
       }
+    },
+    {
+      "date": "2026-11-11",
+      "baseline_sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+      "branches": {
+        "incidents": {
+          "branch": "training/2026-11-11/incidents",
+          "code_commit": "5d8b51a2c8056892288aa32975af203b487fc221",
+          "documentation_commit": "f5f9c2c817e77a0dfd22038b874f034e936076a7"
+        },
+        "team_a": {
+          "branch": "training/2026-11-11/team-a",
+          "commit": "56dd80223ded8da434b4dc4c85324e06a4658e32"
+        },
+        "team_b": {
+          "branch": "training/2026-11-11/team-b",
+          "commit": "37d369b25de1e70a448e7d0b1779cc285d540db9"
+        }
+      },
+      "tickets": [
+        "LAB-20261111-01",
+        "LAB-20261111-02",
+        "LAB-20261111-03",
+        "LAB-20261111-04",
+        "LAB-20261111-05"
+      ],
+      "extra": [
+        "FEATURE-20261111-01",
+        "GIT-20261111-01"
+      ],
+      "topic_fingerprints": [
+        "exclusive-purchase-date",
+        "partially-received-replenishment",
+        "return-quality-disposition",
+        "reversed-ledger-balance",
+        "purchase-receipt-payload-idempotency",
+        "supplier-outstanding-commitments",
+        "supplier-email-search-billing-ledger-cherry-pick"
+      ],
+      "documentation": "docs/training/2026-11-11/TICKETS.md",
+      "validation": "PUBLISHED_UNVALIDATED",
+      "validation_evidence": "docs/training/2026-11-11/VALIDATION.md",
+      "blocking_conditions": [
+        "No checkout/runtime with Maven dependencies, Docker or PostgreSQL to execute compilation, HTTP or integration regressions; publication statically verified in GitHub."
+      ],
+      "notification": {
+        "gmail_to": "rammendez95@gmail.com",
+        "subject": "Laboratorio backend 36–40k — 2026-11-11",
+        "status": "PENDING_SEND",
+        "gmail_message_id": null
+      },
+      "user_completion": "NOT_INFERRED",
+      "deliberate_consolidation": [
+        "LAB-20261111-05"
+      ],
+      "expansion_base_used": "2026-11-10"
     }
   ],
   "current_baseline": {

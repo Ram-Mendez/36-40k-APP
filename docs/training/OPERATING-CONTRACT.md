@@ -1,104 +1,88 @@
-# Daily backend lab — operating contract
+# Contrato del laboratorio backend — revisión 2
 
-## Scope
+Vigente desde el 10/11/2026. Repositorio: `Ram-Mendez/36-40k-APP`; rama de control: `training/control`. Objetivo: práctica backend Java/Spring Boot/PostgreSQL de nivel 36–40k en España. Esta política sustituye las reglas anteriores incompatibles; no constituye prueba de ejecución.
 
-- Repository: `Ram-Mendez/36-40k-APP`.
-- Control branch: `training/control`.
-- Initial main snapshot inspected on 2026-11-09: `a6bc8058415a21c3dc75564974e375e69bdab9a9`.
-- Target role: backend Java / Spring Boot / PostgreSQL, Spanish market, 36–40k EUR.
-- Initial observed stack: Java 21, Spring Boot 3.5.12, Maven, PostgreSQL 16, core API and independent shipping service. Re-read the actual files before every change; README claims are not execution evidence.
-- Historical setup context on 2026-11-09: the user reported one incident left from an earlier batch. Do not treat that historical report as current completion status. Read remote commits and `docs/training/PROGRESSION.md`; preserve earlier batches and unpushed local changes.
-- The original setup commit changed documentation only. Configuration updates likewise do not validate application code or tests.
-- Difficulty was raised one bounded step at the user's request on 2026-11-10. Read `docs/training/PROGRESSION.md` before planning the next batch; it records the reviewed main, unresolved integration finding and the current difficulty profile.
+## Base ampliada y alcance de la autorización
 
-## Write boundaries
+La ampliación de negocio es única. Su checkpoint debe identificar capacidades anteriores y nuevas, reglas, migraciones, pruebas, versión remota y límites. SHA publicado: `ad23c49900c51202f8c3c965e5b153d9e925990d`; estado: `PUBLISHED_VALIDATED`; evidencia: `https://github.com/Ram-Mendez/36-40k-APP/blob/ad23c49900c51202f8c3c965e5b153d9e925990d/docs/expansion/2026-11-10/VALIDATION.md`. No volver a duplicar la aplicación por ejecución.
 
-1. Writes are authorized only in this repository and in automation-owned `training/control` and NEW `training/YYYY-MM-DD/*` branches created by this task. Existing branches with that prefix must be inspected before reuse; do not assume ownership.
-2. Never push or merge into `main`, other user branches, or the existing exercise tags `ejercicios/debug-v1` and `ejercicios/debug-v2`. Never force-push, reset, delete branches/tags, overwrite user commits, modify the user's Windows worktrees, or erase volumes/data.
-3. Read the remote branch head again before each ref update and use an expected-head check where supported. On concurrent changes, stop that update and report the conflict.
-4. Do not create paid services, purchase credits, change billing, deploy to production, use external customer data, or use production secrets. Any test environment must be disposable and local to its runner.
-5. Do not trigger the full Jenkins/Kind pipeline for every generated branch. Prefer lightweight validation in an available isolated environment; keep CI changes limited to training branches and report authorization or execution blockers.
+La ampliación conecta proveedores/compras/recepciones, devoluciones/inspección/créditos, facturación/cobros/reembolsos y políticas/propuestas de reposición con pedidos e inventario existentes. Medir crecimiento por flujos útiles verificables, no por CRUD, líneas o servicios. Mantener shipping separado; no crear otro servicio sin frontera funcional que lo justifique.
 
-## Batch construction
+La instrucción del usuario del 10/11 autoriza publicar la ampliación sana como nueva base. Es una excepción específica: los lotes diarios futuros siguen sin autorización de introducir o fusionar defectos en main.
 
-Create one date-keyed batch per run, in Europe/Madrid time. Read the repository, earlier batch manifests, the progression policy and the control index first. A retry must resume the same batch safely rather than create duplicates or overwrite user work.
+El 10/11 no se genera segundo lote, otros cinco bugs, conflicto ni correo adicional. Conservar lo entregado. La rutina posterior mantiene cinco incidencias, feature, Git y correo, sin cambiar horario.
 
-Use an explicit baseline commit selected from the current integrated application. Do not assume that a historical README, old CI run or the current main branch proves the baseline healthy. Reuse a previously validated baseline when appropriate and record its SHA and evidence; never silently stack unresolved intentional faults from yesterday onto a new batch. User fixes may be incorporated only when visible in GitHub and verified, without merging into main automatically.
+## Revisión antes de trabajar
 
-Create these independent branches from the declared baseline:
+Leer este contrato, `PROGRESSION.md`, `INDEX.json`, `SCENARIO-LEDGER.json`, `TICKET-TEMPLATE.md`, `REFERENCE-CORPUS.md`, el checkpoint de ampliación y el estado real del repositorio. Inspeccionar commits, ramas, código relevante, últimos diez lotes disponibles, `work-items` y etiquetas de ejercicios. Los históricos no prueban el estado actual.
 
-- `training/YYYY-MM-DD/incidents`: five new intentional, realistic, independent backend defects, plus the incident tickets and batch manifest.
-- `training/YYYY-MM-DD/team-a`: a small, coherent business change from a simulated teammate, plus its change request.
-- `training/YYYY-MM-DD/team-b`: a second small, coherent change supporting the day's Git integration exercise. Occasionally introduce a controlled, resolvable overlap with team-a; do not manufacture a conflict every day.
+La revisión de la mañana del 10/11 observó correcciones del usuario y una integración que omitía `sort=active` en el catálogo. Releer y verificar ese contrato; no perpetuar ni cerrar el hallazgo por suposiciones. El usuario reportó no entender bien la idempotencia de LAB-20261110-04; un parche no acredita dominio. El antiguo pendiente del 09/11 no es estado vigente. No inferir horas ni autonomía por marcas Git.
 
-All three branches must contain actual useful code changes, not documentation-only placeholders. Do not publish a successful batch summary until the remote branch heads and the changed code files have been confirmed. If only some work is completed, publish that exact partial state and the blocker.
+Seleccionar una base integrada sana y documentar evidencia del mismo código. No arrastrar bugs deliberados anteriores; ni main, README ni un CI de otro SHA acreditan salud. Si el checkpoint no está completado, no anunciar la ampliación validada ni entregar defectos como verificados.
 
-Do not create a pull request targeting main with intentional regressions. Do not merge the branches for the user. If CI requires a PR and authorization permits it, use a separately created training-only baseline branch and a clearly marked draft PR; avoid unnecessary pipeline runs.
+## Límites de escritura
 
-## Workload and incident selection
+- Solo este repositorio, `training/control` y NUEVAS ramas `training/YYYY-MM-DD/*` propias del lote. Inspeccionar ramas existentes antes de reusar.
+- No modificar main por rutina diaria, ramas ajenas, tags `ejercicios/debug-v1`/`debug-v2`, Windows, worktrees del usuario, datos o volúmenes. Conservar todos sus comentarios y documentos de ejercicios.
+- No force-push, reset, borrado, despliegue real, servicios de pago, cambio de facturación, secretos o datos reales.
+- Releer HEAD y usar `expected_sha` antes de actualizar referencias. No sobrescribir cambios concurrentes.
+- Idempotencia de ejecución: reanudar lote del día sin duplicarlo ni reemplazar arreglos del usuario.
+- Runtime temporal, puertos/Compose/base distintos de 8086/9096/5436; no detener contenedores existentes. No eludir permisos o aprobaciones.
 
-Each batch contains exactly five incident tickets, one bounded business/change request and one Git integration exercise, designed as a queue rather than an obligation to finish everything that day. Effective 2026-11-10, target one lower-intermediate, three intermediate and one bounded upper-intermediate incident. This replaces the original two-straightforward/two-intermediate/one-demanding distribution. Increase diagnostic depth, edge-case coverage and contract preservation, not ticket count, obscurity, infrastructure or seniority. Apply the detailed calibration in `docs/training/PROGRESSION.md`.
+## Novedad y selección
 
-At most one incident per batch may be an isolated operator/direction/literal mistake. At least three should require relating two pieces of evidence or stages of an existing flow. A correct fix may still be small: do not inflate code changes artificially. The upper-intermediate item introduces only one bounded transaction, retry/idempotency, resource-authorization or concurrency challenge at a time. Preserve sufficient reproduction facts; difficulty must not come from guessing hidden requirements.
+La huella registra dominio, flujo, familia de invariante, familia de fallo, frontera y evidencia observable. El ledger no contiene método defectuoso ni receta. Comparar con documentos originales, no solo etiquetas. El registro distingue inferencia estática, documento histórico y ejecución observada.
 
-Rotate through existing code and real domain behavior: SQL/JdbcTemplate, joins and aggregates, pagination and ordering, transaction boundaries/rollback, concurrency and inventory integrity, authorization, validation/error contracts, REST dependency failures, idempotency, date/money handling, integration tests, observability and query performance. Prioritize backend work; no frontend exercises and no infrastructure rebuilds for their own sake.
+Vetar repetir mecanismo + invariante en los últimos diez lotes aunque cambien nombres, números o endpoint. Una competencia amplia puede reaparecer con otra relación de evidencias y otra frontera. Registrar antecedente cercano y novedad. Excepción: como máximo una práctica deliberada de consolidación por lote, ligada a dificultad expresamente pendiente y con frontera nueva. No inventar detalles históricos inaccesibles.
 
-Avoid repeating the same fault mechanism with renamed entities. Review prior batches and exercise history, including INC-001 through INC-010 where available. New IDs use `LAB-YYYYMMDD-01` through `LAB-YYYYMMDD-05` to avoid collisions.
+Cinco incidencias: una medio-baja, tres medias, una medio-alta acotada. Máximo una inversión aislada de literal/operador/dirección. Al menos tres relacionan dos etapas/evidencias y una frontera. El arreglo puede ser breve. La medio-alta trabaja una sola propiedad transaccional, de concurrencia, autorización por recurso o reintento.
 
-The application should still compile and start; defects should be observed through legitimate business requests, results, persisted state or controlled concurrent operations, rather than trivial compilation errors. Do not disable authentication globally, expose the service publicly or seed destructive behavior. Preserve existing migrations, tests and their assertions; failures may be expected, but do not hide them to obtain green CI.
+Al menos tres áreas o flujos por lote, máximo dos incidencias de la misma área. En los cinco primeros lotes tras la ampliación, al menos dos sobre capacidades nuevas validadas. Si no es posible, comunicar límite; no inventar cobertura ni aumentar complejidad sin motivo.
 
-No fault labels, solution comments, explanatory commit messages, root-cause maps or teacher-answer files in student branches. Git history is inherently inspectable: do not claim that the diff can be hidden from the repository owner.
+Rotar SQL/agregados/cardinalidad, paginación, estado/rollback, permisos, importes/fechas, reservas/recepciones/devoluciones, créditos/cobros, reposición/compras pendientes, errores REST, rendimiento y observabilidad. No concentrar en filtros/orden/literales. No añadir frontend, Kafka ni infraestructura por decoración.
 
-The business request is intermediate but small: one observable behavior, one domain rule, a success case, a relevant rejection/boundary case and compatibility with prior behavior. It must leave meaningful implementation work for the user, beyond accepting solved teammate branches or adding a field to an allowlist. Simulated teammates may provide useful partial code/contracts without solving the entire user's feature.
+## Ramas y trabajo
 
-For testing, require a relevant regression, a meaningful edge case and persisted-state checks where appropriate, reusing existing coverage rather than duplicating it. State acceptance criteria without providing solution tests upfront. Do not infer mastery from a patch or elapsed commit time; retain focused practice in areas the user reports not understanding.
+Fecha en Europe/Madrid. Incidencias: `LAB-YYYYMMDD-01` a `05`. Crear desde base explícita:
 
-## Ticket format
+| Rama | Resultado |
+|---|---|
+| `training/YYYY-MM-DD/incidents` | Cinco defectos independientes y documentos del lote |
+| `training/YYYY-MM-DD/team-a` | Cambio real y acotado de compañero simulado |
+| `training/YYYY-MM-DD/team-b` | Segundo cambio real con contrato propio |
 
-Write concise professional Spanish, as work items from support, QA or another developer. Use only what a colleague could genuinely report:
+No ramas vacías. Mantener compilación y arranque; manifestación por peticiones legítimas/estado persistido. Conservar autenticación, migraciones aplicadas, pruebas y assertions. No ocultar fallos. No PR de defectos contra main ni integración por el usuario. Para validar por CI, draft contra base de entrenamiento separada si está autorizado; evitar Jenkins/Kind completo repetido.
 
-- ID and title, priority, affected environment/build.
-- Observed behavior and business impact.
-- Minimum necessary request/data/reproduction conditions, when known.
-- Expected behavior and objectively verifiable acceptance criteria.
-- Actual available evidence (HTTP response, requestId, query result or logs).
+Feature media: comportamiento nuevo, regla de negocio, éxito, frontera/rechazo y compatibilidad. Debe requerir implementación del usuario; compañeros pueden aportar contratos/código parcial, no entregar todo resuelto ni limitarla a allowlist.
 
-No 'contexto amigable', motivational introductions, tutorial sections, difficulty explanations, suggested solution, faulty class/method/line, answer key or spoon-fed debugging checklist. Distinguish a designed reproduction from a reproduction actually executed. Never fabricate logs, timings, request IDs, IDs of remote resources or test results.
+Git medio: conservar contratos de A y B. Rotar merge/conflicto ocasional, cherry-pick/backport, revert y bisect; máximo una maniobra nueva. Dar resultado, no receta. Ausencia de marcadores no demuestra integración correcta. Son una cola de trabajo, no siete obligaciones diarias.
 
-The daily delivery contains `docs/training/YYYY-MM-DD/TICKETS.md`, `MANIFEST.md` and `VALIDATION.md` on the incidents branch, with the branch names and SHAs, baseline, statuses and safe retrieval instructions. State external behavior without explaining the defect implementation.
+## Tickets y evidencia
 
-For Git, give the outcome required (integrate two changes, retain both behaviors, backport one change, or revert a faulty release), not a full solved command sequence. Rotate fetch/switch/tracking, pull --ff-only, merge/conflict resolution, cherry-pick, revert and bisect. Introduce at most one new Git maneuver per batch. Require acceptance checks for both teammate contracts; absence of conflict markers alone is not successful integration. Do not recommend pulling unrelated branches into the active main branch.
+Usar `TICKET-TEMPLATE.md`: ID/título, tipo/componente, prioridad/impacto, entorno/build/SHA, actor/permisos, precondiciones, reproducción mínima, observado/esperado, criterios verificables y evidencias. Features y Git especifican sus contratos y alcance. Distinguir prioridad de severidad cuando aporte información.
 
-Provide safe PowerShell entry commands using a NEW worktree after fetching, with real refs resolved from this delivery. If a destination already exists, do not delete or overwrite it. Keep runtime ports, Compose project names and test databases separate from the user's existing 8086/9096/5436 environment; do not stop their running services.
+Sin contexto amigable, tutorial, motivación, causas, clases/líneas, pasos de arreglo, answer keys, test solución o comentarios reveladores. El diff es inspeccionable; no prometer ocultarlo. Formato corporativo simulado; no fingir reportes de QA o empresas reales. Si el escenario no se ejecutó, declarar reproducción diseñada pendiente, nunca inventar logs, IDs o tiempos.
 
-## Validation
+Un ticket está listo cuando puede verificarse sin adivinar requisitos. No marcarlo resuelto por push/merge/test añadido. Aceptación requiere evidencia pertinente al SHA: resultado principal, frontera y preservación de flujo relacionado.
 
-Attempt baseline checks, compilation, startup, isolated reproduction of each defect and preservation of unrelated behavior using the available execution environment. Run existing unit/integration tests when possible; PostgreSQL-backed integration coverage must not be replaced with H2. Separate compilation failure, expected regression test failure, unexpected test failure and environmental blockage.
+## Validación y publicación
 
-Each validation item must be labeled `PASS`, `FAIL_EXPECTED`, `FAIL_UNEXPECTED` or `NOT_EXECUTED`, with command, commit SHA and actual evidence. Do not present unexecuted changes as validated, or a partially prepared batch as five verified bugs. If execution is unavailable, code may be published as `UNVALIDATED` with explicit warnings and commands to validate; do not invent success.
+Comprobar base, compilación, arranque, defectos aislados/independencia y regresiones relacionadas con runtime disponible. PostgreSQL real para integración, no H2. Concurrencia coordinada, no sleeps como única sincronización. Tests relevantes, sin duplicación artificial.
 
-After writing, fetch the changed files and branch heads to verify publication. Record actual links/SHAs and report access/approval/quota blockers. An inaccessible connector is not permission to bypass authorization.
+Registrar `PASS`, `FAIL_EXPECTED`, `FAIL_UNEXPECTED`, `NOT_EXECUTED` con comando, SHA y evidencia. Compilación no prueba cinco defectos; verde sin ambos contratos no cierra Git. Si no se puede ejecutar, publicación `UNVALIDATED` con impedimento y comandos; no éxito inventado.
 
-## Engineering baseline and source register
+Tras escribir, releer archivos y referencias remotas. Publicar `TICKETS.md`, `MANIFEST.md`, `VALIDATION.md` en `docs/training/YYYY-MM-DD/`. Separar control/calibración de tickets. Instrucciones de entrada PowerShell con fetch y NUEVO worktree, sin borrar destinos existentes.
 
-Apply current production-oriented engineering rather than an imaginary universal '2026 standard': compatible supported dependencies, incremental maintainable design, precise API contracts, real PostgreSQL behavior, authorization boundaries, reversible schema evolution, reproducible tests, bounded timeouts/retries and useful observability. Do not upgrade frameworks indiscriminately or add Kafka, AI, Kubernetes or more microservices without a concrete requirement.
+## Registro y fuentes
 
-The initial application pins Spring Boot 3.5.12. Compare its maintained patch line and compatibility against current official documentation before proposing a separate maintenance change; do not silently switch this lab to Spring Boot 4 or another JDK.
+Mantener INDEX y ledger: fecha, base, ramas/SHAs, tickets, huellas, antecedentes/novedad, validación/bloqueos. Actualizar progresión solo con evidencia nueva, distinguiendo declaración, inspección y ejecución. No cerrar por cuenta propia trabajo del usuario.
 
-Official reference entry points, checked during setup on 2026-11-09 (recheck relevance and versions at use time):
+Ingeniería proporcionada: contratos, integridad/autorización, migraciones incrementales, pruebas reproducibles, timeouts/reintentos limitados y observabilidad útil. Releer versiones reales; actualización de dependencias es mantenimiento separado, no salto automático a Boot 4/JDK. Verificar documentación oficial vigente y compatible de Spring/PostgreSQL/GitHub/OWASP.
 
-- Spring Boot production features: https://docs.spring.io/spring-boot/reference/actuator/index.html
-- Spring Boot / Testcontainers: https://docs.spring.io/spring-boot/reference/testing/testcontainers.html
-- Spring support policy: https://spring.io/support
-- PostgreSQL isolation: https://www.postgresql.org/docs/current/transaction-iso.html
-- OWASP API Security: https://owasp.org/API-Security/editions/2023/en/0x11-t10/
+Corpus: 3 proyectos acreditados al 10/11. Meta exploratoria 1000, no auditoría ya realizada. Hasta tres productos públicos pertinentes por ejecución; registrar URL/commit/archivos/fecha/patrón/límites y deduplicar. No contar tutoriales, metadatos ni documentación oficial como producto. No copiar código incompatible. No reiniciar/engordar contador; calidad del lote primero. Fuentes del formato: `TICKET-SOURCES.md`.
 
-The user's request to consider 1,000 real projects is a target for an evidence-backed reference corpus, NOT a claim that 1,000 repositories have already been reviewed. Start the verified external-project count at zero. Progressively inspect up to three relevant production-oriented public repositories per run when useful, de-duplicate them, and record repository URL, inspected paths/commit, inspection date, pattern observed, applicability and limitations in `docs/training/REFERENCE-CORPUS.md` on the control branch. Metadata-only listings and tutorials do not count as inspected real projects; distinguish demos from deployed open-source products. Do not copy incompatible licensed code, infer private commercial experience, or claim statistical representativeness.
+## Notificación
 
-Stop counting at the actual number evidenced; report that number honestly rather than filling a quota. The quality and reproducibility of this user's exercises take priority over growing the corpus.
+Cada lote nuevo posterior al 10/11 exige publicación comprobada y correo Gmail a `rammendez95@gmail.com`, asunto `Laboratorio backend 36–40k — AAAA-MM-DD`, con links verdaderos, ramas, validación y bloqueos, sin pistas. Buscar destinatario/asunto exacto antes de reintentar; conservar messageId real y no duplicar. Si el lote está incompleto, comunicarlo igualmente; si Gmail falla/pide autorización, entrega incompleta y sin inventar éxito. No sustituir envío por borrador/recordatorio ni cambiar ajustes globales. La exclusión fechada del 10/11 prevalece.
 
-## State and delivery
-
-Maintain `docs/training/INDEX.json` on the control branch with date, baseline SHA, published branches/SHAs, ticket IDs and topic fingerprints, validation status, known blockers and verified external-project count. Never record unknown user completion as done. Check remote state on every run, not just this index. Read `docs/training/PROGRESSION.md` for the latest calibration and review findings; resolve or isolate pre-existing known regressions before using a new baseline.
-
-Notify the user with a short Spanish delivery: batch date, actual branches, ticket-document location, verification status and any blocking condition. Do not reveal causes or fixes. Do not claim that their local application changed, that their machine must stay on, or that a scheduled run is guaranteed to succeed despite permissions, approvals or quota.
+Resumen al usuario máximo cinco puntos con resultados reales; no afirmar cambios en su aplicación local ni ejecución garantizada frente a bloqueos.

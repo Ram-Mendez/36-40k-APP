@@ -56,3 +56,16 @@ Valoración de calibración, no certificación: LAB-01/02/03 son bajos por reque
 - https://github.com/Ram-Mendez/36-40k-APP/actions/runs/42782787505
 
 Esta revisión modifica únicamente configuración/documentación del laboratorio. No entrega un lote nuevo, no cierra tickets del usuario y no sustituye la validación de ejecución.
+
+
+## Ampliación y validación del 10/11/2026 — revisión posterior
+
+La petición expresa del usuario autorizó ampliar y publicar una base sana para evitar escenarios repetidos. La autorización de esta entrega permite avanzar main y no concede a los lotes futuros permiso para introducir o fusionar defectos allí. Nueva base: `ad23c49900c51202f8c3c965e5b153d9e925990d`; detalle: [evidencia](https://github.com/Ram-Mendez/36-40k-APP/blob/ad23c49900c51202f8c3c965e5b153d9e925990d/docs/expansion/2026-11-10/VALIDATION.md).
+
+Se incorporaron compras/proveedores/recepciones, devoluciones/inspección, facturación/cobros/reembolsos y reposición: 36 → 71 operaciones HTTP. La ejecución aislada obtuvo PASS en 34 pruebas unitarias, 100 de integración con PostgreSQL 16.13 y 24 del servicio shipping, sin omitidas; el smoke real realizó 32 peticiones y 23 comprobaciones. La huella del código y los resultados están versionados con la ampliación. El workflow Jenkins/Kind remoto se comprueba por separado; estos resultados no son una afirmación sobre ese workflow.
+
+La falta de `sort=active` observada por la mañana se corrigió en esta ampliación autorizada y se verificó junto con `sort=sku`. El CI anterior `42782787505` terminó FAIL por búsqueda literal de SKU; se corrigió el comodín añadido tras `_` y pasó la prueba existente. Estas correcciones son trabajo asistido de preparación de base, no evidencia de comprensión autónoma del usuario ni cierre automático de CAT/GIT.
+
+Se conserva la escala 1 medio-baja + 3 medias + 1 medio-alta. Se añade ledger: comparar mecanismo/invariante con diez lotes, mínimo tres áreas y máximo dos casos por área; en los cinco primeros lotes nuevos, al menos dos casos de capacidades nuevas. Una consolidación deliberada puede repetir una competencia con frontera distinta y motivo explícito.
+
+El 10/11 no se crea segundo lote de cinco bugs, otro conflicto ni otro correo. La ampliación se hace una sola vez y su base publicada sirve para los lotes posteriores. No se modificó el contador de tres proyectos acreditados ni se afirmó una auditoría de mil repositorios.

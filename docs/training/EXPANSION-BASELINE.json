@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "EXP-20261110",
+  "date": "2026-11-10",
+  "status": "PUBLISHED_VALIDATED",
+  "repository": "Ram-Mendez/36-40k-APP",
+  "branch": "main",
+  "baseline_sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+  "parent_sha": "48a5b99440e4e6f3fbe125c822209d3499822b25",
+  "review_branch": "feat/business-expansion-2026-11-10",
+  "repeat_expansion_each_run": false,
+  "capabilities": [
+    "procurement",
+    "returns",
+    "billing",
+    "replenishment"
+  ],
+  "http_operations": {
+    "before": 36,
+    "after": 71
+  },
+  "validation": {
+    "status": "PASS",
+    "unit_tests": 34,
+    "integration_tests": 100,
+    "shipping_tests": 24,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "live_http_requests": 32,
+    "live_http_assertions": 23,
+    "postgresql": "16.13",
+    "source_manifest_sha256": "01296c5d143698bf0f90fede41cbdc3d33d9d6652ff28657bc3631903e1f82d5",
+    "evidence_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/ad23c49900c51202f8c3c965e5b153d9e925990d/docs/expansion/2026-11-10/VALIDATION.md",
+    "remote_ci_status": "CHECK_BEFORE_NEXT_BATCH"
+  },
+  "today_exclusion": {
+    "date": "2026-11-10",
+    "additional_batch": false,
+    "additional_conflicts": false,
+    "additional_email": false
+  },
+  "daily_rules": {
+    "minimum_domains": 3,
+    "max_same_domain": 2,
+    "repeat_window_batches": 10,
+    "first_new_batches": 5,
+    "minimum_new_domain_incidents": 2,
+    "difficulty": [
+      "medio-baja",
+      "media",
+      "media",
+      "media",
+      "medio-alta acotada"
+    ]
+  },
+  "user_tickets_closed": false,
+  "external_corpus_count_changed": false
+}

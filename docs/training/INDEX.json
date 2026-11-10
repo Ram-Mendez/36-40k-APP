@@ -11,7 +11,9 @@
   "user_previous_batch": {
     "status": "UNKNOWN",
     "known_remaining": "one reported outstanding issue",
-    "preserved": true
+    "preserved": true,
+    "historical_report_date": "2026-11-09",
+    "not_current_completion_status": true
   },
   "batches": [
     {
@@ -64,6 +66,25 @@
         "gmail_message_id": "1a1c296c1b6321bd",
         "delivery_details": "Gmail send_email returned SENT, messageId 1a1c296c1b6321bd; recipient is the user"
       }
+    }
+  ],
+  "current_baseline": {
+    "sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+    "branch": "main",
+    "status": "PUBLISHED_VALIDATED",
+    "checkpoint": "docs/training/EXPANSION-BASELINE.json",
+    "evidence_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/ad23c49900c51202f8c3c965e5b153d9e925990d/docs/expansion/2026-11-10/VALIDATION.md"
+  },
+  "scenario_ledger": "docs/training/SCENARIO-LEDGER.json",
+  "ticket_template": "docs/training/TICKET-TEMPLATE.md",
+  "expansions": [
+    {
+      "id": "EXP-20261110",
+      "date": "2026-11-10",
+      "baseline_sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+      "status": "PUBLISHED_VALIDATED",
+      "additional_daily_batch_created": false,
+      "additional_email_sent": false
     }
   ]
 }

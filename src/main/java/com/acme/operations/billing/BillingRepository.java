@@ -29,7 +29,7 @@ public class BillingRepository {
             ), payments AS (
                 SELECT invoice_id,
                     sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) AS paid
-                FROM invoice_entry WHERE reversed_at IS NULL GROUP BY invoice_id
+                FROM invoice_entry GROUP BY invoice_id
             ), balances AS (
                 SELECT i.*, i.product_total+i.shipping_total AS total,
                     coalesce(c.credited,0) AS credited, coalesce(p.paid,0) AS paid,

@@ -181,6 +181,28 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void logoutRejectsTheSameBearerOnProductsAndPreservesOtherLogins() throws Exception {
+        String sessionToClose = "Bearer " + token("readonly");
+        String otherSession = "Bearer " + token("readonly");
+        String products = "/api/v1/products";
+
+        mvc.perform(get(products).header("Authorization", sessionToClose))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/logout").header("Authorization", sessionToClose))
+                .andExpect(status().isNoContent());
+        mvc.perform(get(products).header("Authorization", sessionToClose))
+                .andExpect(status().isUnauthorized());
+
+        mvc.perform(get(products).header("Authorization", otherSession))
+                .andExpect(status().isOk());
+        String newSession = "Bearer " + token("readonly");
+        mvc.perform(get(products).header("Authorization", newSession))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/users").header("Authorization", newSession))
+                .andExpect(status().isForbidden());
+    }
+
     // Un JWT vencido y una sesión refresh vencida se rechazan aunque sean auténticos.
     @Test
     void expiredSignedAccessTokenAndExpiredRefreshAreRejected() throws Exception {

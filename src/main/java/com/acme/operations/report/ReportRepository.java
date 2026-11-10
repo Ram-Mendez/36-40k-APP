@@ -26,7 +26,7 @@ public class ReportRepository {
     public PageResponse<ReportDtos.CustomerSales> sales(
             Instant from, Instant to, int page, int size) {
         // Selecciona los estados que se tienen en cuenta para la consulta de ventas.
-        StringBuilder filter = new StringBuilder(" WHERE o.status IN ('COMPLETED','CONFIRMED')");
+        StringBuilder filter = new StringBuilder(" WHERE o.status IN ('COMPLETED')");
         // Los parámetros se acumulan en el orden de los ? del filtro.
         List<Object> args = new ArrayList<>();
         // El límite inicial se incluye mediante >= y se convierte a timestamp SQL.

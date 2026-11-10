@@ -58,6 +58,7 @@ public class InventoryController {
     }
 
     // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // PARECE QUE pinta aqui
     @GetMapping("/movements")
     // Devuelve el historial de movimientos; no calcula una reserva nueva.
     public PageResponse<InventoryDtos.Movement> movements(

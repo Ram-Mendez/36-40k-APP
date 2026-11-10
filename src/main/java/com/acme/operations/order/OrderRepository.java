@@ -195,7 +195,7 @@ public class OrderRepository {
         // En el conflicto de clave única, la línea conserva su precio pactado.
         jdbc.update(
                 "INSERT INTO order_line(order_id,product_id,quantity,unit_price) VALUES (?,?,?,?)"
-                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=order_line.quantity+excluded.quantity",
+                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=excluded.quantity",
                 id,
                 productId,
                 quantity,

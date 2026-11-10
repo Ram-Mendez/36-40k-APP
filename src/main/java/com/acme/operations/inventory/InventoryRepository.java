@@ -157,7 +157,7 @@ public class InventoryRepository {
                 jdbc.query(
                         "SELECT * FROM stock_movement"
                                 + where
-                                + " ORDER BY id ASC LIMIT ? OFFSET ?",
+                                + " ORDER BY id DESC LIMIT ? OFFSET ?",
                         (rs, n) ->
                                 new InventoryDtos.Movement(
                                         rs.getLong("id"),

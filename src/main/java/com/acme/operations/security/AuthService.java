@@ -252,7 +252,7 @@ public class AuthService {
                     // Actualiza las sesiones asociadas y conserva su historial.
                     jdbc.update(
                              "UPDATE auth_session SET revoked_at=coalesce(revoked_at,current_timestamp)"
-                                 + " WHERE family_id=? AND used_at IS NOT NULL",
+                                 + " WHERE family_id=? AND used_at IS NULL",
                              family);
                     // Deja registro del cierre dentro de la misma transacción.
                     audit.record("LOGOUT", "SESSION", sessionId, "Session family revoked");

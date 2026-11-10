@@ -88,7 +88,8 @@ public class ProcurementRepository {
                     HttpStatus.BAD_REQUEST, "INVALID_SEARCH", "Search is limited to 200 characters");
             String pattern = "%" + search.trim().toLowerCase(Locale.ROOT)
                     .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
-            where.append(" AND (lower(name) LIKE ? ESCAPE '!' OR lower(tax_id) LIKE ? ESCAPE '!')");
+            where.append(" AND (lower(name) LIKE ? ESCAPE '!' OR lower(tax_id) LIKE ? ESCAPE '!' OR lower(email) LIKE ? ESCAPE '!')");
+            args.add(pattern);
             args.add(pattern);
             args.add(pattern);
         }

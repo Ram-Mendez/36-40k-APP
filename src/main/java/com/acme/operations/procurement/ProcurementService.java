@@ -168,8 +168,6 @@ public class ProcurementService {
         String payloadHash = fingerprint(reference, receiptLines);
         var previous = repository.previousReceipt(id, input.requestId());
         if (previous.isPresent()) {
-            if (!previous.get().payloadHash().equals(payloadHash)) throw conflict(
-                    "IDEMPOTENCY_CONFLICT", "Request ID was already used with a different receipt payload");
             return repository.receipt(id, previous.get().id());
         }
         requireState(order, Set.of("SUBMITTED", "PARTIALLY_RECEIVED"));

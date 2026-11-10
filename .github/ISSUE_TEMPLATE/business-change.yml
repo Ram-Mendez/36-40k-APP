@@ -1,0 +1,39 @@
+name: Cambio de negocio
+description: Define necesidad, alcance y criterios de aceptación de una evolución.
+title: "[Story] "
+body:
+  - type: input
+    id: component-build
+    attributes:
+      label: Componente y base
+      description: Dominio, epic si aplica, rama y SHA de referencia.
+    validations:
+      required: true
+  - type: textarea
+    id: need
+    attributes:
+      label: Necesidad e impacto
+      description: Actor, necesidad y resultado de negocio.
+    validations:
+      required: true
+  - type: textarea
+    id: scope-rules
+    attributes:
+      label: Alcance y reglas
+      description: Comportamiento a incorporar, precondiciones, límites y dependencias.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Éxito, frontera o rechazo y compatibilidad con un flujo anterior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Dependencias y evidencia
+      description: Contratos y enlaces reales; indicar lo pendiente de implementar o ejecutar.
+    validations:
+      required: false

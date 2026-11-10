@@ -38,6 +38,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @ActiveProfiles("test")
 // Reúne infraestructura y funciones compartidas; esta clase por sí sola no es un caso de prueba.
 public abstract class AbstractIntegrationTest {
+    // Permite usar un PostgreSQL de pruebas dedicado cuando Docker no está disponible.
+    // Si no se configura, se mantiene Testcontainers como infraestructura por defecto.
+    private static final String EXTERNAL_DATABASE_URL = System.getProperty("test.database.url", "");
     // Testcontainers creará un PostgreSQL real y aislado usando esta imagen; necesita Docker.
     protected static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16.13-alpine");
@@ -56,7 +59,7 @@ public abstract class AbstractIntegrationTest {
     // El bloque estático prepara la infraestructura compartida antes de ejecutar las pruebas.
     static {
         // Arranca el contenedor real y espera a que la base de datos esté disponible.
-        POSTGRES.start();
+        if (EXTERNAL_DATABASE_URL.isBlank()) POSTGRES.start();
         // Si el servidor local no puede arrancar, la clase de pruebas no se inicializa.
         try {
             // El puerto 0 pide al sistema un puerto disponible para no fijar uno concreto.
@@ -109,9 +112,15 @@ public abstract class AbstractIntegrationTest {
     @DynamicPropertySource
     static void infrastructure(DynamicPropertyRegistry properties) {
         // La aplicación de prueba se conecta al contenedor, no a la base de datos local del usuario.
-        properties.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        properties.add("spring.datasource.username", POSTGRES::getUsername);
-        properties.add("spring.datasource.password", POSTGRES::getPassword);
+        if (EXTERNAL_DATABASE_URL.isBlank()) {
+            properties.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+            properties.add("spring.datasource.username", POSTGRES::getUsername);
+            properties.add("spring.datasource.password", POSTGRES::getPassword);
+        } else {
+            properties.add("spring.datasource.url", () -> EXTERNAL_DATABASE_URL);
+            properties.add("spring.datasource.username", () -> System.getProperty("test.database.username", "business"));
+            properties.add("spring.datasource.password", () -> System.getProperty("test.database.password", ""));
+        }
         // Apunta shipping al servidor simulado que acaba de arrancar.
         properties.add(
                 "shipping.base-url", () -> "http://127.0.0.1:" + CARRIER.getAddress().getPort());

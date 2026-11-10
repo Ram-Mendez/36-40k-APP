@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "original_base_sha": "48a5b99440e4e6f3fbe125c822209d3499822b25",
+  "runtime": {
+    "java": "21.0.13",
+    "maven": "3.9.12",
+    "postgresql": "16.13",
+    "spring_boot": "3.5.12"
+  },
+  "groups": {
+    "unit": {
+      "totals": {
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": [
+        {
+          "name": "com.acme.operations.InventoryServiceTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.143,
+          "cases": [
+            "adjustmentCannotConsumeReservedStock",
+            "missingReservationCannotReleaseStock",
+            "sufficientAvailableStockCreatesReservationAndMovement",
+            "zeroQuantityCannotBeReserved",
+            "rejectsUnsupportedAdjustmentsBeforeAnyWrite(long)[1]",
+            "rejectsUnsupportedAdjustmentsBeforeAnyWrite(long)[2]",
+            "rejectsUnsupportedAdjustmentsBeforeAnyWrite(long)[3]",
+            "rejectsUnsupportedAdjustmentsBeforeAnyWrite(long)[4]",
+            "rejectsUnsupportedAdjustmentsBeforeAnyWrite(long)[5]",
+            "insufficientAvailableStockRejectsReservationBeforeWrites",
+            "cancellationReleasesReservationWithoutDebitingOnHand",
+            "successfulAdjustmentRecordsBusinessContextAfterWrite"
+          ]
+        },
+        {
+          "name": "com.acme.operations.OrderServiceTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.999,
+          "cases": [
+            "staleCarrierQuoteCannotConsumeStock",
+            "emptyOrderCannotTransitionOrReserveStock",
+            "confirmationOfNonDraftFailsBeforeStockChanges(String)[1]",
+            "confirmationOfNonDraftFailsBeforeStockChanges(String)[2]",
+            "confirmationOfNonDraftFailsBeforeStockChanges(String)[3]"
+          ]
+        },
+        {
+          "name": "com.acme.operations.ShippingClientTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 1.648,
+          "cases": [
+            "slowCarrierIsBoundedByReadTimeout",
+            "malformedOrInvalidQuotesBecomeBusinessUnavailable(String)[1]",
+            "malformedOrInvalidQuotesBecomeBusinessUnavailable(String)[2]",
+            "malformedOrInvalidQuotesBecomeBusinessUnavailable(String)[3]",
+            "malformedOrInvalidQuotesBecomeBusinessUnavailable(String)[4]",
+            "malformedOrInvalidQuotesBecomeBusinessUnavailable(String)[5]",
+            "sendsExactOrderAmountToShipping(String)[1]",
+            "sendsExactOrderAmountToShipping(String)[2]",
+            "validQuotePreservesReferenceAndDecimalCost",
+            "forwardsRequestId",
+            "httpFailureBecomesBusinessUnavailable"
+          ]
+        },
+        {
+          "name": "com.acme.operations.common.OpenApiSchemaTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 3.991,
+          "cases": [
+            "documentationDistinguishesDtosWithTheSameSimpleName"
+          ]
+        },
+        {
+          "name": "com.acme.operations.order.OrderServiceTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.017,
+          "cases": [
+            "staleQuoteCannotDebitStock",
+            "cancellationOfConfirmedOrderReleasesReservedUnits",
+            "draftCannotBeCompleted",
+            "completedOrderCannotBeCancelledOrReleaseStock",
+            "emptyOrderCannotReserveOrTransition"
+          ]
+        }
+      ]
+    },
+    "integration": {
+      "totals": {
+        "tests": 100,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": [
+        {
+          "name": "com.acme.operations.BillingIntegrationTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 5.989,
+          "cases": [
+            "receivedGoodsProduceCreditAndRefundWhileOriginalShippingRemainsPaid",
+            "rejectsOverpaymentInvalidAmountsAndUnfundedRefundWithoutPartialLedgerOrAudit",
+            "concurrentSamePaymentRequestReturnsOnePersistedEntryAndOneAudit",
+            "settlementReplaySurvivesReversalWithoutResurrectingOrDuplicatingTheEntry",
+            "issuingSnapshotsCustomerAndOrderAmountsAndReplaysWithoutAnotherInvoiceOrAudit",
+            "cannotReversePaymentBelowZeroNetPaidUntilRelatedRefundHasBeenReversed",
+            "issuanceRequiresCompletedOrderAndInclusiveDueDateWindow",
+            "concurrentDifferentPaymentsCannotCollectMoreThanTheOutstandingBalance",
+            "agingUsesCurrentBalancesAndSeparatesFutureDuesRefundsAndFilteredPages",
+            "twoReturnsAndTwoPaymentsAreAggregatedWithoutMultiplyingEitherRelationship",
+            "settlementPermissionsAndEntryOwnershipAreEnforcedAtTheRequestedInvoice"
+          ]
+        },
+        {
+          "name": "com.acme.operations.BusinessIntegrationTest",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 12.546,
+          "cases": [
+            "negativePriceIsValidationError",
+            "orderTotalCountsBothLinesWhenTheirAmountsMatch",
+            "insufficientSecondLineRollsBackFirstReservationAndMovements",
+            "adjustmentCannotConsumeReservedUnits",
+            "carrierFailurePreservesConfirmedOrderAndReservationForRetry",
+            "staleProductUpdateIsConflictAndPreservesNewPrice",
+            "competingOrdersCannotReserveSameUnits()[1]",
+            "competingOrdersCannotReserveSameUnits()[2]",
+            "competingOrdersCannotReserveSameUnits()[3]",
+            "zeroLineQuantityDoesNotPersist",
+            "catalogSearchTreatsSkuAndNamePunctuationLiterally",
+            "orderFiltersAndPaginationReturnMatchingStatusAndCustomer",
+            "productSearchCombinesPaginationAndActiveFilter",
+            "invalidCustomerDoesNotPersist",
+            "completedOrderCannotBeCancelledOrCompletedTwice",
+            "inventoryJoinReturnsCorrectAvailableBalance",
+            "orderTotalUsesDecimalSnapshotAndLineReplacement",
+            "cancellationDuringCarrierCallWinsWithoutPartialShipment",
+            "invalidPaginationAndSortAreRejected",
+            "emptyOrderCannotBeConfirmed",
+            "salesReportAggregatesOnlyCompletedOrdersAndHonorsDateWindow",
+            "consecutiveOrderPagesDoNotOverlap",
+            "confirmationReservesWithoutReducingPhysicalStock",
+            "salesReportCountsOrderOnlyAfterCompletion",
+            "withdrawalKeepsItsNegativeQuantityInMovementHistory",
+            "zeroAdjustmentIsRejectedWithoutMovement",
+            "confirmedOrderCannotBeEditedOrConfirmedTwice",
+            "successfulOrderOperationHasCorrelatedAuditAndFailedTransitionDoesNot",
+            "inactiveSecondProductRollsBackFirstReservationAndMovements",
+            "customerCanBeUpdatedAndSoftDeleted",
+            "movementHistoryReturnsNewestAdjustmentsFirstAcrossPages",
+            "inactiveCustomerCannotPlaceNewOrder",
+            "duplicateProductSkuIsConflict",
+            "cancellingConfirmedOrderReleasesEveryReservation",
+            "completingOrderCallsCarrierAndConsumesStock",
+            "repeatingLinePutPreservesQuantitiesPricesAndOrderTotal",
+            "duplicateCustomerTaxIdIsConflict",
+            "lowStockReportIncludesMissingBalanceAndCountsConfirmedOrders"
+          ]
+        },
+        {
+          "name": "com.acme.operations.CatalogCompatibilityIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.359,
+          "cases": [
+            "integratedCatalogRetainsBothSkuAndActiveOrderingContracts"
+          ]
+        },
+        {
+          "name": "com.acme.operations.ProcurementIntegrationTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 4.539,
+          "cases": [
+            "supplierDeactivationBlocksNewCommitmentsButAllowsReceivingSubmittedGoods",
+            "supplierUpdateRequiresCurrentVersionAndTaxIdentifierIsCanonical",
+            "receiptValidationRejectsDuplicateUnknownAndInvalidLinesWithoutChanges",
+            "concurrentSameRequestReceivesStockExactlyOnce",
+            "supplierSearchTreatsWildcardsLiterallyAndKeepsActiveFilterInCount",
+            "concurrentReceiptsCannotReceiveMoreThanOrdered",
+            "readonlyCannotCreateSuppliersOrReceiveGoodsAndAnonymousCannotRead",
+            "draftPricesCanChangeButSubmittedPurchaseAndDeliveryPlanAreStable",
+            "overflowInAnotherInventoryRollsBackWithoutPublishingAReceipt",
+            "listFiltersAndPagingUseTheSamePopulationAndRejectUnknownSort",
+            "partialAndFinalReceiptsIncreaseOnlyPhysicalStockAndReplayTheOriginalReceipt",
+            "invalidCostDateAndTotalDoNotPersistAPartialPurchaseChange",
+            "multiLineOverReceiptLeavesAllStockAndReceiptsUntouched"
+          ]
+        },
+        {
+          "name": "com.acme.operations.ReplenishmentIntegrationTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 11.997,
+          "cases": [
+            "thresholdEqualityAndDisabledPoliciesOrProductsDoNotProduceProposals",
+            "missingBalancesRemainVisibleAndPaginationUsesLiteralSearchAndStableProductOrder",
+            "proposalCombinesAvailableStockAndEveryOutstandingPurchaseWithoutJoinMultiplication",
+            "concurrentReplacementsWithOneVersionCannotLoseAnUpdate",
+            "invalidRangesAndCreationVersionsLeaveNoPolicyAndMaximumQuantityIsSupported",
+            "policyCreationAndReplacementUseAnExplicitVersionContract",
+            "inactiveAndMissingPreferredSuppliersAreVisibleWarningsWithoutAutomaticPurchases",
+            "readsAndWritesRespectRolesAndRejectInvalidPagination"
+          ]
+        },
+        {
+          "name": "com.acme.operations.ReturnIntegrationTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 3.481,
+          "cases": [
+            "receivingUsesSoldPricesAndSeparatesRestockFromDamagedWithoutConsumingReservations",
+            "rejectsIncompleteOrdersForeignProductsDuplicateLinesAndStaleReview",
+            "invalidSecondDispositionPersistsNoPartialStockCreditOrReceipt",
+            "concurrentRequestsCannotAllocateMoreThanTheSoldQuantity",
+            "stockOverflowOnSecondLineRollsBackFirstLineAndAllReceiptData",
+            "concurrentIdenticalReceiptsRestockOnlyOnce",
+            "requestAndReceiptReplayDoNotDuplicateStockOrAuditAndRejectChangedPayload",
+            "cumulativeQuantitiesIncludePendingReturnsAndRejectionReleasesTheAllowance",
+            "listFiltersHaveStablePaginationAndReadonlyCannotWrite"
+          ]
+        },
+        {
+          "name": "com.acme.operations.security.BootstrapAdminIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.583,
+          "cases": [
+            "provisionsEmptyDatabaseOnceWithoutResettingExistingAdministrator",
+            "refusesDevelopmentPasswordAndLeavesDatabaseEmpty"
+          ]
+        },
+        {
+          "name": "com.acme.operations.security.PermissionAndErrorIntegrationTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 1.821,
+          "cases": [
+            "usersUseSharedPaginationContractAndCombineFilters",
+            "malformedJsonAndNumericParametersReturnConsistent400",
+            "readonlyCannotMutateAnyBusinessResourceOrReadAuditAndDatabaseIsUnchanged",
+            "unsupportedMethodReturns405InsteadOfServerError",
+            "unsupportedContentTypeReturns415InsteadOfServerError",
+            "readonlyCanOpenAnOrderFromTheList"
+          ]
+        },
+        {
+          "name": "com.acme.operations.security.SecurityIntegrationTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 8.129,
+          "cases": [
+            "tokenRotationRejectsOldAccessAndReplayRevokesSuccessor",
+            "logoutRevokesBothTokensAndStoresOnlyRefreshHash",
+            "expiredSignedAccessTokenAndExpiredRefreshAreRejected",
+            "authenticationAndOperationPermissionAreSeparate",
+            "logoutRejectsTheSameBearerOnProductsAndPreservesOtherLogins",
+            "passwordChangeChecksOldSecretThenRevokesEverySession",
+            "userRoleChangesTakeEffectImmediatelyAndDeactivationRevokesSessions",
+            "cannotDemoteOwnAdminAndDuplicateUsernameIsConflict",
+            "invalidUserInputDoesNotInsertAnyUser",
+            "wrongPasswordAndUnknownUserHaveSameUnauthorizedResponse",
+            "concurrentRefreshCanIssueOnlyOneSuccessorAndReplayRevokesIt",
+            "signedTokenWithMalformedSessionClaimIsUnauthorized"
+          ]
+        }
+      ]
+    },
+    "shipping": {
+      "totals": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "suites": [
+        {
+          "name": "com.acme.shipping.PricingPropertiesTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.137,
+          "cases": [
+            "invalidConfigurationStopsStartup(String)[1]",
+            "invalidConfigurationStopsStartup(String)[2]",
+            "invalidConfigurationStopsStartup(String)[3]",
+            "invalidConfigurationStopsStartup(String)[4]"
+          ]
+        },
+        {
+          "name": "com.acme.shipping.QuoteHttpTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 3.614,
+          "cases": [
+            "invalidInputReturnsBadRequestProblemDetail(String)[1]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[2]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[3]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[4]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[5]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[6]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[7]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[8]",
+            "invalidInputReturnsBadRequestProblemDetail(String)[9]",
+            "repeatedQuotationIsDeterministicAndPreservesTheWarehouseContract",
+            "replacesAnUnsafeRequestIdBeforeLoggingOrEchoingIt",
+            "amountAtTheFreeShippingThresholdReturnsZeroCost",
+            "exposesIndependentHealthProbes(String)[1]",
+            "exposesIndependentHealthProbes(String)[2]"
+          ]
+        },
+        {
+          "name": "com.acme.shipping.QuoteServiceTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "duration_seconds": 0.031,
+          "cases": [
+            "usesConfiguredPricesAndNormalizesEquivalentAmounts",
+            "appliesShippingPolicyAtItsBoundaries(String, String)[1]",
+            "appliesShippingPolicyAtItsBoundaries(String, String)[2]",
+            "appliesShippingPolicyAtItsBoundaries(String, String)[3]",
+            "appliesShippingPolicyAtItsBoundaries(String, String)[4]",
+            "appliesShippingPolicyAtItsBoundaries(String, String)[5]"
+          ]
+        }
+      ]
+    }
+  },
+  "total_tests": 158,
+  "live_http": {
+    "requests": 32,
+    "assertions": 23,
+    "result": "PASS"
+  },
+  "source_manifest_sha256": "01296c5d143698bf0f90fede41cbdc3d33d9d6652ff28657bc3631903e1f82d5",
+  "ci_jenkins_kind": "NOT_EXECUTED_IN_THIS_ENVIRONMENT"
+}

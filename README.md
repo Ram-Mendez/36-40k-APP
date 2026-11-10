@@ -4,6 +4,8 @@
 
 Backend de operaciones B2B de una distribuidora: clientes, catálogo, inventario, reservas, pedidos, transporte y auditoría. Dos servicios Java 21 / Spring Boot 3.5.12 comunicados por REST: el núcleo de operaciones con PostgreSQL 16 y un servicio independiente de cotizaciones. El núcleo conserva sus módulos y transacciones locales; incluye el frontend Angular de `frontend/`.
 
+**Ampliación del 10/11/2026.** El backend incorpora proveedores y compras con recepciones parciales, devoluciones e inspección, facturas operativas, cobros/reembolsos y reposición con suministro pendiente: **36 → 71 operaciones HTTP**. [Alcance y decisiones](docs/expansion/2026-11-10/SCOPE.md), [contratos API](docs/expansion/2026-11-10/API.md), [tickets de entrega](docs/expansion/2026-11-10/TICKETS.md) y [validación](docs/expansion/2026-11-10/VALIDATION.md). Los nuevos flujos se utilizan desde la API y Swagger; Flyway añade V5–V8 conservando los datos existentes.
+
 Esta carpeta, `36-40k-APP`, reúne el frontend, los comentarios de estudio, el servicio de envío independiente y las correcciones de los cinco ejercicios. Abre este `pom.xml` y el de `services/shipping-service` en IntelliJ.
 
 ## Empieza aquí
@@ -12,7 +14,7 @@ La [hoja de ruta de 80 horas](docs/WAREHOUSE-ROADMAP.md) contiene 19 actividades
 
 | Servicio | Responsabilidad | Datos y contrato |
 | --- | --- | --- |
-| Núcleo (`app` en Compose, `backend-app` en K8s) | Clientes, catálogo, inventario, pedidos, informes, auditoría y JWT | PostgreSQL propio; API `/api/v1` en 8086 |
+| Núcleo (`app` en Compose, `backend-app` en K8s) | Clientes, catálogo, inventario, ventas, compras, devoluciones, facturación, reposición, informes, auditoría y JWT | PostgreSQL propio; API `/api/v1` en 8086 |
 | [`shipping-service`](services/shipping-service/README.md) | Cotización: 7,50 EUR; gratis desde 200,00 EUR | Sin estado ni acceso a la BD del núcleo; `GET /quotes` en 9096 |
 
 ## Frontend Angular

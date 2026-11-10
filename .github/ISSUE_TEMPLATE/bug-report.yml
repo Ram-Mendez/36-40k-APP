@@ -1,0 +1,55 @@
+name: Incidencia de negocio
+description: Registra comportamiento observado, impacto y criterios verificables.
+title: "[Bug] "
+body:
+  - type: input
+    id: component-build
+    attributes:
+      label: Componente y build
+      description: Dominio, rama y SHA observado.
+    validations:
+      required: true
+  - type: dropdown
+    id: evidence-state
+    attributes:
+      label: Estado de evidencia
+      options:
+        - Reproducido con evidencia adjunta
+        - Reproducción diseñada pendiente de ejecutar
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Síntoma e impacto
+      description: Consecuencia observable y prioridad justificada.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Condiciones y reproducción
+      description: Actor, permisos, entorno, estado inicial, datos mínimos y secuencia.
+    validations:
+      required: true
+  - type: textarea
+    id: observed-expected
+    attributes:
+      label: Resultado observado y esperado
+      description: Distingue ejecución real de escenario diseñado.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación
+      description: Resultado principal, frontera pertinente y compatibilidad.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencia disponible
+      description: Links, status, requestId o capturas reales; sin credenciales ni datos personales.
+    validations:
+      required: false

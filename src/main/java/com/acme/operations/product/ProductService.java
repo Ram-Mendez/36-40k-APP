@@ -41,7 +41,7 @@ public class ProductService {
             int page, int size, String sort, String direction, String search, Boolean active) {
         // Valida tamaño, página y columnas permitidas antes de construir el Pageable.
         var pageable =
-                PageRequests.of(page, size, sort, direction, Set.of("id", "name", "unitPrice", "sku"));
+                PageRequests.of(page, size, sort, direction, Set.of("id", "name", "unitPrice", "sku", "active"));
         // Limita la longitud de búsqueda para mantener controlada la entrada.
         if (search != null && search.length() > 200)
             throw new BusinessException(
@@ -65,7 +65,7 @@ public class ProductService {
                                                 + search.toLowerCase(Locale.ROOT)
                                                         .replace("!", "!!")
                                                         .replace("%", "!%")
-                                                        .replace("_", "!_%")
+                                                        .replace("_", "!_")
                                                 + "%";
                                 // Busca coincidencias en nombre o SKU; basta con que coincida uno de ellos.
                                 predicates.add(

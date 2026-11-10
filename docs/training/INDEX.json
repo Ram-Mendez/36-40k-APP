@@ -114,8 +114,9 @@
       "notification": {
         "gmail_to": "rammendez95@gmail.com",
         "subject": "Laboratorio backend 36–40k — 2026-11-11",
-        "status": "PENDING_SEND",
-        "gmail_message_id": null
+        "status": "SENT",
+        "gmail_message_id": "1a1c7bbefc9f7b06",
+        "delivery_details": "Gmail send_email confirmed: messageId 1a1c7bbefc9f7b06, to rammendez95@gmail.com; sent after GitHub remote readback."
       },
       "user_completion": "NOT_INFERRED",
       "deliberate_consolidation": [

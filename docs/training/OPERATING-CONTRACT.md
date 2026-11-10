@@ -7,8 +7,9 @@
 - Initial main snapshot inspected on 2026-11-09: `a6bc8058415a21c3dc75564974e375e69bdab9a9`.
 - Target role: backend Java / Spring Boot / PostgreSQL, Spanish market, 36–40k EUR.
 - Initial observed stack: Java 21, Spring Boot 3.5.12, Maven, PostgreSQL 16, core API and independent shipping service. Re-read the actual files before every change; README claims are not execution evidence.
-- The user has one incident left from an earlier batch. Its identity and unpushed local changes are unknown. Do not mark it solved, modify the earlier batches, or depend on its completion.
-- This setup commit changes documentation only. No application code, tests, runtime, database, existing branches or tags have been changed or validated by this setup.
+- Historical setup context on 2026-11-09: the user reported one incident left from an earlier batch. Do not treat that historical report as current completion status. Read remote commits and `docs/training/PROGRESSION.md`; preserve earlier batches and unpushed local changes.
+- The original setup commit changed documentation only. Configuration updates likewise do not validate application code or tests.
+- Difficulty was raised one bounded step at the user's request on 2026-11-10. Read `docs/training/PROGRESSION.md` before planning the next batch; it records the reviewed main, unresolved integration finding and the current difficulty profile.
 
 ## Write boundaries
 
@@ -20,7 +21,7 @@
 
 ## Batch construction
 
-Create one date-keyed batch per run, in Europe/Madrid time. Read the repository, earlier batch manifests and the control index first. A retry must resume the same batch safely rather than create duplicates or overwrite user work.
+Create one date-keyed batch per run, in Europe/Madrid time. Read the repository, earlier batch manifests, the progression policy and the control index first. A retry must resume the same batch safely rather than create duplicates or overwrite user work.
 
 Use an explicit baseline commit selected from the current integrated application. Do not assume that a historical README, old CI run or the current main branch proves the baseline healthy. Reuse a previously validated baseline when appropriate and record its SHA and evidence; never silently stack unresolved intentional faults from yesterday onto a new batch. User fixes may be incorporated only when visible in GitHub and verified, without merging into main automatically.
 
@@ -36,7 +37,9 @@ Do not create a pull request targeting main with intentional regressions. Do not
 
 ## Workload and incident selection
 
-Each batch contains exactly five incident tickets, one bounded business/change request and one Git integration exercise, designed as a queue rather than an obligation to finish everything that day. Aim for two straightforward, two intermediate and one more demanding incident, calibrated from the user's visible progress.
+Each batch contains exactly five incident tickets, one bounded business/change request and one Git integration exercise, designed as a queue rather than an obligation to finish everything that day. Effective 2026-11-10, target one lower-intermediate, three intermediate and one bounded upper-intermediate incident. This replaces the original two-straightforward/two-intermediate/one-demanding distribution. Increase diagnostic depth, edge-case coverage and contract preservation, not ticket count, obscurity, infrastructure or seniority. Apply the detailed calibration in `docs/training/PROGRESSION.md`.
+
+At most one incident per batch may be an isolated operator/direction/literal mistake. At least three should require relating two pieces of evidence or stages of an existing flow. A correct fix may still be small: do not inflate code changes artificially. The upper-intermediate item introduces only one bounded transaction, retry/idempotency, resource-authorization or concurrency challenge at a time. Preserve sufficient reproduction facts; difficulty must not come from guessing hidden requirements.
 
 Rotate through existing code and real domain behavior: SQL/JdbcTemplate, joins and aggregates, pagination and ordering, transaction boundaries/rollback, concurrency and inventory integrity, authorization, validation/error contracts, REST dependency failures, idempotency, date/money handling, integration tests, observability and query performance. Prioritize backend work; no frontend exercises and no infrastructure rebuilds for their own sake.
 
@@ -45,6 +48,10 @@ Avoid repeating the same fault mechanism with renamed entities. Review prior bat
 The application should still compile and start; defects should be observed through legitimate business requests, results, persisted state or controlled concurrent operations, rather than trivial compilation errors. Do not disable authentication globally, expose the service publicly or seed destructive behavior. Preserve existing migrations, tests and their assertions; failures may be expected, but do not hide them to obtain green CI.
 
 No fault labels, solution comments, explanatory commit messages, root-cause maps or teacher-answer files in student branches. Git history is inherently inspectable: do not claim that the diff can be hidden from the repository owner.
+
+The business request is intermediate but small: one observable behavior, one domain rule, a success case, a relevant rejection/boundary case and compatibility with prior behavior. It must leave meaningful implementation work for the user, beyond accepting solved teammate branches or adding a field to an allowlist. Simulated teammates may provide useful partial code/contracts without solving the entire user's feature.
+
+For testing, require a relevant regression, a meaningful edge case and persisted-state checks where appropriate, reusing existing coverage rather than duplicating it. State acceptance criteria without providing solution tests upfront. Do not infer mastery from a patch or elapsed commit time; retain focused practice in areas the user reports not understanding.
 
 ## Ticket format
 
@@ -60,7 +67,7 @@ No 'contexto amigable', motivational introductions, tutorial sections, difficult
 
 The daily delivery contains `docs/training/YYYY-MM-DD/TICKETS.md`, `MANIFEST.md` and `VALIDATION.md` on the incidents branch, with the branch names and SHAs, baseline, statuses and safe retrieval instructions. State external behavior without explaining the defect implementation.
 
-For Git, give the outcome required (integrate two changes, retain both behaviors, backport one change, or revert a faulty release), not a full solved command sequence. Rotate fetch/switch/tracking, pull --ff-only, merge/conflict resolution, cherry-pick, revert and bisect. Do not recommend pulling unrelated branches into the active main branch.
+For Git, give the outcome required (integrate two changes, retain both behaviors, backport one change, or revert a faulty release), not a full solved command sequence. Rotate fetch/switch/tracking, pull --ff-only, merge/conflict resolution, cherry-pick, revert and bisect. Introduce at most one new Git maneuver per batch. Require acceptance checks for both teammate contracts; absence of conflict markers alone is not successful integration. Do not recommend pulling unrelated branches into the active main branch.
 
 Provide safe PowerShell entry commands using a NEW worktree after fetching, with real refs resolved from this delivery. If a destination already exists, do not delete or overwrite it. Keep runtime ports, Compose project names and test databases separate from the user's existing 8086/9096/5436 environment; do not stop their running services.
 
@@ -92,6 +99,6 @@ Stop counting at the actual number evidenced; report that number honestly rather
 
 ## State and delivery
 
-Maintain `docs/training/INDEX.json` on the control branch with date, baseline SHA, published branches/SHAs, ticket IDs and topic fingerprints, validation status, known blockers and verified external-project count. Never record unknown user completion as done. Check remote state on every run, not just this index.
+Maintain `docs/training/INDEX.json` on the control branch with date, baseline SHA, published branches/SHAs, ticket IDs and topic fingerprints, validation status, known blockers and verified external-project count. Never record unknown user completion as done. Check remote state on every run, not just this index. Read `docs/training/PROGRESSION.md` for the latest calibration and review findings; resolve or isolate pre-existing known regressions before using a new baseline.
 
 Notify the user with a short Spanish delivery: batch date, actual branches, ticket-document location, verification status and any blocking condition. Do not reveal causes or fixes. Do not claim that their local application changed, that their machine must stay on, or that a scheduled run is guaranteed to succeed despite permissions, approvals or quota.

@@ -35,7 +35,7 @@ public class CustomerService {
     public PageResponse<CustomerDtos.View> list(
             int page, int size, String sort, String direction, String search, Boolean active) {
         // Valida límites y permite ordenar solo por id o nombre.
-        var pageable = PageRequests.of(page, size, sort, direction, Set.of("id", "name"));
+        var pageable = PageRequests.of(page, size, sort, direction, Set.of("id", "name", "active"));
         // Rechaza un texto de búsqueda excesivamente largo.
         if (search != null && search.length() > 200)
             throw new BusinessException(

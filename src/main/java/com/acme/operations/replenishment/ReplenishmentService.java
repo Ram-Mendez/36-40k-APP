@@ -44,7 +44,7 @@ public class ReplenishmentService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ReplenishmentDtos.Policy upsert(long productId, ReplenishmentDtos.PolicyInput input) {
-        if (input.targetStock() < input.minimumStock()) throw new BusinessException(
+        if (input.active() && input.targetStock() < input.minimumStock()) throw new BusinessException(
                 HttpStatus.BAD_REQUEST,"INVALID_REPLENISHMENT_RANGE","Target stock must be at least minimum stock");
         boolean productActive = repository.productActive(productId);
         if (input.active() && !productActive) throw new BusinessException(

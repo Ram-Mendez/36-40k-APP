@@ -52,7 +52,7 @@ public class ReportRepository {
         var rows =
                 jdbc.query(
                         "SELECT"
-                            + " c.id,c.name,count(o.id),sum(o.total),sum(coalesce(o.shipping_cost,0))"
+                            + " c.id,c.name,count(o.id),sum(o.total+coalesce(o.shipping_cost,0)),sum(coalesce(o.shipping_cost,0))"
                             + " FROM customer c JOIN sales_order o ON o.customer_id=c.id"
                                 + filter
                                 + " GROUP BY c.id,c.name ORDER BY sum(o.total) DESC,c.id LIMIT ?"

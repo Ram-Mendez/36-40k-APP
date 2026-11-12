@@ -82,7 +82,7 @@ public class BillingService {
             return entry;
         }
         var invoice = repository.get(id);
-        BigDecimal allowed = kind.equals("PAYMENT") ? invoice.balance() : invoice.balance().negate();
+        BigDecimal allowed = kind.equals("PAYMENT") ? invoice.balance() : invoice.credited().subtract(invoice.netPaid());
         if (allowed.signum() <= 0 || request.amount().compareTo(allowed) > 0)
             throw conflict(kind.equals("PAYMENT") ? "PAYMENT_EXCEEDS_BALANCE" : "REFUND_EXCEEDS_CREDIT",
                     "Amount exceeds the current " + (kind.equals("PAYMENT") ? "outstanding balance" : "refundable credit"));

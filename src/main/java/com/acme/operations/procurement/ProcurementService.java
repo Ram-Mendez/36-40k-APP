@@ -95,7 +95,7 @@ public class ProcurementService {
     public ProcurementDtos.Purchase create(ProcurementDtos.PurchaseCreate input) {
         var supplier = repository.activeSupplier(input.supplierId());
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        LocalDate expectedOn = input.expectedOn() == null ? today.plusDays(supplier.leadTimeDays()) : input.expectedOn();
+        LocalDate expectedOn = input.expectedOn() == null ? today.plusDays(Math.max(0, supplier.leadTimeDays() - 1)) : input.expectedOn();
         if (expectedOn.isBefore(today) || expectedOn.isAfter(today.plusYears(2))) throw bad(
                 "INVALID_EXPECTED_DATE", "Expected arrival must be between today (UTC) and two years from today");
         long id = repository.create(supplier.id(), expectedOn);

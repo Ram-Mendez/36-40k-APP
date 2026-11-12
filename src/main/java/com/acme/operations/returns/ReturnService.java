@@ -114,7 +114,7 @@ public class ReturnService {
 
     private ReturnDtos.View decide(long id, ReturnDtos.Decision request, String target) {
         var header = lockReturn(id);
-        requireVersion(header, request.version());
+        if (target.equals("REJECTED")) requireVersion(header, request.version());
         requireState(header, "REQUESTED");
         repository.decide(id, target, request.reason().trim());
         audit.record("RETURN_" + target, "RETURN", Long.toString(id), request.reason().trim());

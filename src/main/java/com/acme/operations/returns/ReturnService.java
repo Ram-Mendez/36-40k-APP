@@ -149,7 +149,7 @@ public class ReturnService {
                 var balance = inventory.lock(disposition.productId());
                 long onHand;
                 try {
-                    onHand = Math.addExact(balance.onHand(), disposition.restockQuantity() + disposition.damagedQuantity());
+                    onHand = Math.addExact(balance.onHand(), disposition.restockQuantity());
                 } catch (ArithmeticException exception) {
                     throw conflict("STOCK_CAPACITY_EXCEEDED", "Returned stock exceeds the supported quantity");
                 }

@@ -46,6 +46,28 @@ public class ProcurementRepository {
         return rows.getFirst();
     }
 
+    public ProcurementDtos.SupplierCommitment supplierCommitments(long id) {
+        var rows = jdbc.query("""
+                SELECT s.id AS supplier_id,
+                       count(DISTINCT l.purchase_order_id) AS purchase_order_count,
+                       coalesce(sum(l.quantity - l.received_quantity), 0) AS outstanding_units,
+                       coalesce(sum((l.quantity - l.received_quantity) * l.unit_cost), 0) AS outstanding_value,
+                       min(o.expected_on) FILTER (WHERE l.purchase_order_id IS NOT NULL) AS earliest_expected_on
+                FROM supplier s
+                LEFT JOIN purchase_order o ON o.supplier_id = s.id
+                    AND o.status IN ('SUBMITTED', 'PARTIALLY_RECEIVED')
+                LEFT JOIN purchase_order_line l ON l.purchase_order_id = o.id
+                    AND l.quantity > l.received_quantity
+                WHERE s.id = ?
+                GROUP BY s.id
+                """, (rs, n) -> new ProcurementDtos.SupplierCommitment(
+                        rs.getLong("supplier_id"), rs.getLong("purchase_order_count"),
+                        rs.getLong("outstanding_units"), rs.getBigDecimal("outstanding_value"),
+                        rs.getObject("earliest_expected_on", LocalDate.class)), id);
+        if (rows.isEmpty()) throw missing("SUPPLIER_NOT_FOUND", "Supplier not found");
+        return rows.getFirst();
+    }
+
     public ProcurementDtos.Supplier activeSupplier(long id) {
         var rows = jdbc.query("SELECT * FROM supplier WHERE id=? FOR SHARE",
                 (rs, n) -> supplierRow(rs), id);
@@ -152,7 +174,7 @@ public class ProcurementRepository {
             args.add(status);
         }
         if (dueBefore != null) {
-            where.append(" AND o.expected_on<=?");
+            where.append(" AND o.expected_on<?");
             args.add(dueBefore);
         }
         long count = jdbc.queryForObject("SELECT count(*) FROM purchase_order o" + where,

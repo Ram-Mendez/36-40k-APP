@@ -121,6 +121,96 @@ class ProcurementIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void openCommitmentsCountOrdersOnceAndValueOnlyOutstandingUnits() throws Exception {
+        long supplier = supplier(1);
+        long gloves = product();
+        long boots = product();
+        LocalDate early = LocalDate.now(ZoneOffset.UTC).plusDays(4);
+        LocalDate later = early.plusDays(2);
+        String purchases = "/api/v1/purchase-orders";
+        String submit = purchases + "/{id}/submit";
+        String receipts = purchases + "/{id}/receipts";
+        String commitments = "/api/v1/suppliers/{id}/open-commitments";
+        long first = call(post(purchases), Map.of("supplierId", supplier, "expectedOn", early.toString()), 201).get("id").asLong();
+        long second = call(post(purchases), Map.of("supplierId", supplier, "expectedOn", later.toString()), 201).get("id").asLong();
+        line(first, gloves, 5, "2.15");
+        line(first, boots, 2, "0.30");
+        line(second, gloves, 1, "3.10");
+        line(second, boots, 2, "1.05");
+        call(post(submit, first), null, 200);
+        call(post(submit, second), null, 200);
+        call(post(receipts, first), receipt(UUID.randomUUID(), gloves, 2), 200);
+
+        long draft = purchase(supplier);
+        line(draft, boots, 12, "50.00");
+        long cancelled = purchase(supplier);
+        line(cancelled, boots, 11, "60.00");
+        call(post(purchases + "/{id}/cancel", cancelled), null, 200);
+        submitted(gloves, 9); // Another supplier's open order.
+        call(delete("/api/v1/suppliers/{id}", supplier), null, 204);
+        String readonlyBearer = "Bearer " + token("readonly");
+        JsonNode summary = callAs(readonlyBearer, get(commitments, supplier), null, 200);
+        assertThat(summary.get("supplierId").asLong()).isEqualTo(supplier);
+        assertThat(summary.get("purchaseOrderCount").asLong()).isEqualTo(2);
+        assertThat(summary.get("outstandingUnits").asLong()).isEqualTo(8);
+        assertThat(summary.get("outstandingValue").decimalValue()).isEqualByComparingTo("12.25");
+        assertThat(summary.get("earliestExpectedOn").asText()).isEqualTo(early.toString());
+
+        call(post(receipts, first), Map.of("requestId", UUID.randomUUID(), "deliveryReference", "FINAL-A",
+                "lines", List.of(receiptLine(gloves, 3), receiptLine(boots, 2))), 200);
+        JsonNode remaining = callAs(readonlyBearer, get(commitments, supplier), null, 200);
+        assertThat(remaining.get("purchaseOrderCount").asLong()).isEqualTo(1);
+        assertThat(remaining.get("earliestExpectedOn").asText()).isEqualTo(later.toString());
+        call(post(receipts, second), Map.of("requestId", UUID.randomUUID(), "deliveryReference", "FINAL-B",
+                "lines", List.of(receiptLine(gloves, 1), receiptLine(boots, 2))), 200);
+        JsonNode empty = callAs(readonlyBearer, get(commitments, supplier), null, 200);
+        assertThat(empty.get("supplierId").asLong()).isEqualTo(supplier);
+        assertThat(empty.get("purchaseOrderCount").asLong()).isZero();
+        assertThat(empty.get("outstandingUnits").asLong()).isZero();
+        assertThat(empty.get("outstandingValue").decimalValue()).isEqualByComparingTo("0");
+        assertThat(empty.get("earliestExpectedOn").isNull()).isTrue();
+    }
+
+    @Test
+    void readonlyCanReadSupplierCommitmentsAndGetsNotFoundForUnknownSupplier() throws Exception {
+        long supplier = supplier(1);
+        bearer = "Bearer " + token("readonly");
+        String commitments = "/api/v1/suppliers/{id}/open-commitments";
+        assertThat(call(get(commitments, supplier), null, 200).get("supplierId").asLong()).isEqualTo(supplier);
+        assertThat(call(get(commitments, Long.MAX_VALUE), null, 404).get("code").asText()).isEqualTo("SUPPLIER_NOT_FOUND");
+    }
+
+    @Test
+    void reusedReceiptRequestIdRejectsChangedDeliveryAndPreservesOriginalReceipt() throws Exception {
+        long productId = product();
+        long orderId = submitted(productId, 10);
+        long initialStock = stock(productId, "on_hand");
+        String receipts = "/api/v1/purchase-orders/{id}/receipts";
+        UUID requestId = UUID.randomUUID();
+        var firstDelivery = Map.of("requestId", requestId, "deliveryReference", "ALBARAN-A",
+                "lines", List.of(receiptLine(productId, 3)));
+        var original = call(post(receipts, orderId), firstDelivery, 200);
+
+        var changedDelivery = Map.of("requestId", requestId, "deliveryReference", "ALBARAN-B",
+                "lines", List.of(receiptLine(productId, 4)));
+        var conflict = call(post(receipts, orderId), changedDelivery, 409);
+        assertThat(conflict.get("code").asText()).isEqualTo("IDEMPOTENCY_CONFLICT");
+        assertThat(call(post(receipts, orderId), firstDelivery, 200)).isEqualTo(original);
+        assertThat(call(get(receipts, orderId), null, 200).get("totalElements").asLong()).isEqualTo(1);
+        assertThat(stock(productId, "on_hand")).isEqualTo(initialStock + 3);
+        var order = call(get("/api/v1/purchase-orders/{id}", orderId), null, 200);
+        assertThat(order.get("status").asText()).isEqualTo("PARTIALLY_RECEIVED");
+        var line = order.get("lines").get(0);
+        assertThat(line.get("receivedQuantity").asLong()).isEqualTo(3);
+        assertThat(line.get("outstandingQuantity").asLong()).isEqualTo(7);
+
+        call(post(receipts, orderId), receipt(UUID.randomUUID(), productId, 7), 200);
+        var completed = call(get("/api/v1/purchase-orders/{id}", orderId), null, 200);
+        assertThat(completed.get("status").asText()).isEqualTo("RECEIVED");
+        assertThat(stock(productId, "on_hand")).isEqualTo(initialStock + 10);
+    }
+
+    @Test
     void multiLineOverReceiptLeavesAllStockAndReceiptsUntouched() throws Exception {
         long first = product();
         long second = product();
@@ -239,6 +329,27 @@ class ProcurementIntegrationTest extends AbstractIntegrationTest {
                 Map.of("requestId", UUID.randomUUID(), "deliveryReference", "EMPTY", "lines", List.of()), 400);
         assertThat(stock(product, "on_hand")).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM purchase_receipt WHERE purchase_order_id=?", Long.class, order)).isZero();
+    }
+
+    @Test
+    void dueBeforeIncludesEarlierPurchaseAndExcludesPurchaseOnCutoffDate() throws Exception {
+        long supplierId = supplier(1);
+        LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).plusDays(3);
+        LocalDate earlierDate = cutoff.minusDays(1);
+        var earlierPurchase = call(post("/api/v1/purchase-orders"),
+                Map.of("supplierId", supplierId, "expectedOn", earlierDate.toString()), 201);
+        call(post("/api/v1/purchase-orders"),
+                Map.of("supplierId", supplierId, "expectedOn", cutoff.toString()), 201);
+
+        var page = call(get("/api/v1/purchase-orders")
+                .param("supplierId", Long.toString(supplierId))
+                .param("dueBefore", cutoff.toString()), null, 200);
+
+        assertThat(page.path("content").size()).isEqualTo(1);
+        var onlyPurchase = page.path("content").get(0);
+        assertThat(onlyPurchase.get("id")).isEqualTo(earlierPurchase.get("id"));
+        assertThat(onlyPurchase.path("expectedOn").asText()).isEqualTo(earlierDate.toString());
+        assertThat(page.path("totalElements").asLong()).isEqualTo(1);
     }
 
     @Test
@@ -361,7 +472,12 @@ class ProcurementIntegrationTest extends AbstractIntegrationTest {
     }
 
     private JsonNode call(MockHttpServletRequestBuilder request, Object body, int expectedStatus) throws Exception {
-        request.header("Authorization", bearer);
+        return callAs(bearer, request, body, expectedStatus);
+    }
+
+    private JsonNode callAs(String authorization, MockHttpServletRequestBuilder request,
+                            Object body, int expectedStatus) throws Exception {
+        request.header("Authorization", authorization);
         if (body != null) request.contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(body));
         var response = mvc.perform(request).andReturn().getResponse();
         assertThat(response.getStatus()).withFailMessage("HTTP %s: %s", response.getStatus(), response.getContentAsString())

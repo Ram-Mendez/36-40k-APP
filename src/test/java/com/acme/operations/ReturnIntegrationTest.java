@@ -31,6 +31,36 @@ class ReturnIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void receivingOneSellableAndTwoDamagedUnitsAddsOnlyOneUnitToStock() throws Exception {
+        Sale sale = saleWithOpeningStock(10, 3, "14.00");
+        long productId = sale.products().getFirst();
+        assertThat(balance(productId, "on_hand")).isEqualTo(7);
+
+        JsonNode requested = request(sale.orderId(), List.of(line(productId, 3)));
+        long returnId = requested.get("id").asLong();
+        JsonNode approved = decision(returnId, "approve", requested.get("version").asLong(), 200);
+        call(post("/api/v1/returns/{id}/receive", returnId),
+                Map.of("requestId", UUID.randomUUID(), "version", approved.get("version").asLong(),
+                        "lines", List.of(disposition(productId, 1, 2))), 200);
+
+        JsonNode received = call(get("/api/v1/returns/{id}", returnId), null, 200);
+        JsonNode inspectedLine = received.get("lines").get(0);
+        assertThat(received.get("status").asText()).isEqualTo("RECEIVED");
+        assertThat(received.get("creditAmount").decimalValue()).isEqualByComparingTo("42.00");
+        assertThat(inspectedLine.get("restockQuantity").asLong()).isEqualTo(1);
+        assertThat(inspectedLine.get("damagedQuantity").asLong()).isEqualTo(2);
+        assertThat(jdbc.queryForList(
+                "SELECT quantity FROM stock_movement WHERE product_id=? AND order_id=? AND kind='RETURN'",
+                Long.class, productId, sale.orderId())).containsExactly(1L);
+
+        JsonNode inventory = call(get("/api/v1/inventory")
+                .param("productId", Long.toString(productId)), null, 200);
+        JsonNode stock = inventory.get("content").get(0);
+        assertThat(stock.get("onHand").asLong()).as("stock after return inspection").isEqualTo(8);
+        assertThat(stock.get("available").asLong()).isEqualTo(8);
+    }
+
+    @Test
     void receivingUsesSoldPricesAndSeparatesRestockFromDamagedWithoutConsumingReservations()
             throws Exception {
         Sale sale = sale(3, "10.00", "7.50");
@@ -271,6 +301,10 @@ class ReturnIntegrationTest extends AbstractIntegrationTest {
     private record Sale(long customerId, long orderId, List<Long> products) {}
 
     private Sale sale(long quantity, String... prices) throws Exception {
+        return saleWithOpeningStock(quantity + 10, quantity, prices);
+    }
+
+    private Sale saleWithOpeningStock(long openingStock, long quantity, String... prices) throws Exception {
         long customer = call(post("/api/v1/customers"),
                 Map.of("name", unique("Return client"), "taxId", unique("B"),
                         "email", "returns@example.test", "address", "Madrid"), 201).path("id").asLong();
@@ -279,7 +313,7 @@ class ReturnIntegrationTest extends AbstractIntegrationTest {
             long product = createProduct(price);
             products.add(product);
             call(post("/api/v1/inventory/{id}/adjustments", product),
-                    Map.of("quantity", quantity + 10, "reason", "Return test opening stock"), 204);
+                    Map.of("quantity", openingStock, "reason", "Return test opening stock"), 204);
         }
         long order = draft(customer, products, quantity);
         call(post("/api/v1/orders/{id}/confirm", order), null, 200);

@@ -44,6 +44,10 @@ public class ProcurementService {
         return repository.supplier(id, false);
     }
 
+    public ProcurementDtos.SupplierCommitment supplierCommitments(long id) {
+        return repository.supplierCommitments(id);
+    }
+
     public PageResponse<ProcurementDtos.Supplier> suppliers(
             String search, Boolean active, int page, int size, String sort, String direction) {
         return repository.suppliers(search, active, page, size, sort, direction);
@@ -168,7 +172,12 @@ public class ProcurementService {
         String payloadHash = fingerprint(reference, receiptLines);
         var previous = repository.previousReceipt(id, input.requestId());
         if (previous.isPresent()) {
-            return repository.receipt(id, previous.get().id());
+            var receipt = previous.get();
+            if (!receipt.payloadHash().equals(payloadHash)) {
+                throw conflict("IDEMPOTENCY_CONFLICT",
+                        "The same requestId was already used with different receipt data");
+            }
+            return repository.receipt(id, receipt.id());
         }
         requireState(order, Set.of("SUBMITTED", "PARTIALLY_RECEIVED"));
         Map<Long, ProcurementDtos.PurchaseLine> ordered = repository.lines(id).stream()

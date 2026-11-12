@@ -65,6 +65,24 @@ class ReplenishmentIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void partialReceiptKeepsProposalWhenProjectedStockIsBelowMinimum() throws Exception {
+        long productId = product(unique("Partial receipt"));
+        long supplierId = supplier();
+        call(put("/api/v1/replenishment/policies/{id}", productId),
+                policy(15, 20, supplierId, true, null), 200);
+        long purchaseId = purchase(supplierId, productId, 12, true);
+        assertThat(proposal(productId).path("incoming").asLong()).isEqualTo(12);
+
+        receive(purchaseId, productId, 4);
+
+        JsonNode afterReceipt = proposal(productId);
+        assertThat(afterReceipt.path("available").asLong()).isEqualTo(4);
+        assertThat(afterReceipt.path("incoming").asLong()).isEqualTo(8);
+        assertThat(afterReceipt.path("projected").asLong()).isEqualTo(12);
+        assertThat(afterReceipt.path("suggestedQuantity").asLong()).isEqualTo(8);
+    }
+
+    @Test
     void proposalCombinesAvailableStockAndEveryOutstandingPurchaseWithoutJoinMultiplication() throws Exception {
         long product = product(unique("Projection"));
         long unrelated = product(unique("Unrelated"));

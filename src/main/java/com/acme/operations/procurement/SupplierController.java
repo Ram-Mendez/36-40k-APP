@@ -39,6 +39,12 @@ public class SupplierController {
         return service.supplier(id);
     }
 
+    @GetMapping("/{supplierId}/open-commitments")
+    public ProcurementDtos.SupplierCommitment getOpenCommitments(
+            @PathVariable @Positive long supplierId) {
+        return service.supplierCommitments(supplierId);
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ResponseEntity<ProcurementDtos.Supplier> create(@Valid @RequestBody ProcurementDtos.SupplierInput input) {

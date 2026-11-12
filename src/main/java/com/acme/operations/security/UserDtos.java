@@ -15,7 +15,7 @@ public final class UserDtos {
             // Usuario obligatorio con caracteres y longitud limitados.
             @NotBlank @Pattern(regexp = "[a-zA-Z0-9._-]{3,80}") String username,
             // Contraseña inicial; el servicio almacena su hash y comprueba el límite en bytes.
-            @NotBlank @Size(min = 12, max = 72) String password,
+            @NotBlank @Size(min = 4, max = 72) String password,
             // El rol debe estar presente y ser uno de los valores del enum Role.
             @NotNull Role role) {}
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_on": "2026-11-12",
+  "updated_on": "2026-11-13",
   "repository": "Ram-Mendez/36-40k-APP",
   "control_branch": "training/control",
   "reference_corpus": {
@@ -187,6 +187,77 @@
       },
       "delivery_check": {
         "date": "2026-11-12",
+        "branch_count": 3,
+        "code_files": 7,
+        "ticket_ids": 5,
+        "documents_verified": true,
+        "gmail_verified": true,
+        "execution_validation": "NOT_EXECUTED"
+      }
+    },
+    {
+      "date": "2026-11-13",
+      "baseline_sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+      "branches": {
+        "incidents": {
+          "branch": "training/2026-11-13/incidents",
+          "code_commit": "5b354475c8ce3b777c6272404f812a71395fca80",
+          "documentation_commit": "182e64faea0df4e431edee72d96bfff2a4a073bc"
+        },
+        "team_a": {
+          "branch": "training/2026-11-13/team-a",
+          "commit": "8e2e918fcb5bce22523fcc2d327432d45c4d44d8"
+        },
+        "team_b": {
+          "branch": "training/2026-11-13/team-b",
+          "commit": "0308a53693c2ccaecd9238eca773726058fb2fa6"
+        }
+      },
+      "tickets": [
+        "LAB-20261113-01",
+        "LAB-20261113-02",
+        "LAB-20261113-03",
+        "LAB-20261113-04",
+        "LAB-20261113-05"
+      ],
+      "extra": [
+        "FEATURE-20261113-01",
+        "GIT-20261113-01"
+      ],
+      "topic_fingerprints": [
+        "supplier-lead-time-implicit-planning",
+        "inactive-policy-threshold-invariant",
+        "credit-refund-on-positive-balance",
+        "shipping-net-sales-separation",
+        "return-approval-version-precondition",
+        "inspection-disposition-aggregate-story",
+        "customer-taxid-active-sorts-merge"
+      ],
+      "documentation": "docs/training/2026-11-13/TICKETS.md",
+      "validation": "PUBLISHED_UNVALIDATED",
+      "validation_evidence": "docs/training/2026-11-13/VALIDATION.md",
+      "blocking_conditions": [
+        "Maven unavailable in execution environment; GitHub network/DNS from local container unavailable; PostgreSQL/Docker not available. No compilation, HTTP, Spring startup or DB integration assertions executed."
+      ],
+      "notification": {
+        "gmail_to": "rammendez95@gmail.com",
+        "subject": "Laboratorio backend 36–40k — 2026-11-13",
+        "status": "SENT",
+        "gmail_message_id": "1a1d21679a041eb3",
+        "delivery_details": "send_email returned messageId; read_email verified recipient, exact subject, SENT label, and 13/11 links"
+      },
+      "user_completion": "NOT_INFERRED",
+      "expansion_base_used": "2026-11-10",
+      "date_check": "Europe/Madrid 2026-11-13",
+      "write_confirmation": {
+        "branches_confirmed": true,
+        "ticket_files_read_back": true,
+        "code_files_confirmed": 5,
+        "team_a_files_confirmed": 1,
+        "team_b_files_confirmed": 1
+      },
+      "delivery_check": {
+        "date": "2026-11-13",
         "branch_count": 3,
         "code_files": 7,
         "ticket_ids": 5,

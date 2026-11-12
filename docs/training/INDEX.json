@@ -202,7 +202,7 @@
         "incidents": {
           "branch": "training/2026-11-13/incidents",
           "code_commit": "5b354475c8ce3b777c6272404f812a71395fca80",
-          "documentation_commit": "182e64faea0df4e431edee72d96bfff2a4a073bc"
+          "documentation_commit": "9780bb76d2ca0650cda94a4f8b4734280cfe4c94"
         },
         "team_a": {
           "branch": "training/2026-11-13/team-a",
@@ -254,7 +254,8 @@
         "ticket_files_read_back": true,
         "code_files_confirmed": 5,
         "team_a_files_confirmed": 1,
-        "team_b_files_confirmed": 1
+        "team_b_files_confirmed": 1,
+        "validation_file_delivery_evidence_updated": true
       },
       "delivery_check": {
         "date": "2026-11-13",

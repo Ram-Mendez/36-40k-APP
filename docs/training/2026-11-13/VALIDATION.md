@@ -14,7 +14,7 @@
 | Pruebas de integración con PostgreSQL | NOT_EXECUTED | Necesita entorno de pruebas aislado; nunca se sustituyó por H2 |
 | Regresión e independencia de cinco defectos | NOT_EXECUTED | No inferir de compilación o inspección estática |
 | Merge Git y tests de aceptación A/B | NOT_EXECUTED | Se reservan para el desarrollador |
-| Email notificatorio | NOT_EXECUTED al redactar | Confirmar con messageId real después de publicación, sin suponer entrega |
+| Email notificatorio | PASS | Gmail `send_email` devolvió `1a1d21679a041eb3`; lectura posterior confirmó destinatario `rammendez95@gmail.com`, asunto exacto `Laboratorio backend 36–40k — 2026-11-13` y etiqueta `SENT` |
 
 **Comandos de validación** para worktree separado, desde raíz del repositorio (PowerShell, con dependencias disponibles):
 

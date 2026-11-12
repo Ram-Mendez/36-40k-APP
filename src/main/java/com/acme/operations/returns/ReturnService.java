@@ -61,6 +61,8 @@ public class ReturnService {
             case "createdAt,asc" -> "created_at ASC,id ASC";
             case "creditAmount,asc" -> "credit_amount ASC,id ASC";
             case "creditAmount,desc" -> "credit_amount DESC,id DESC";
+            case "status,asc" -> "status ASC,id ASC";
+            case "status,desc" -> "status DESC,id DESC";
             default -> throw invalid("INVALID_SORT", "Allowed sorts: createdAt or creditAmount, asc or desc");
         };
         return repository.search(orderId, status, page, size, orderBy);

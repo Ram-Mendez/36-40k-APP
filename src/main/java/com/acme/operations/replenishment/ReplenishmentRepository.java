@@ -146,7 +146,7 @@ public class ReplenishmentRepository {
         var rows = jdbc.query(PROPOSAL_CTE+"""
                 SELECT positions.*,GREATEST(0,target_stock-projected) AS suggested_quantity
                 FROM positions
-                """+where+" ORDER BY product_id LIMIT ? OFFSET ?",PROPOSAL,args.toArray());
+                """+where+" ORDER BY suggested_quantity DESC,product_id ASC LIMIT ? OFFSET ?",PROPOSAL,args.toArray());
         return new PageResponse<>(rows,page,size,count,(int)((count+size-1)/size));
     }
 

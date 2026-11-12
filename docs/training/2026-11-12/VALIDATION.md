@@ -11,7 +11,7 @@
 | Cinco escenarios HTTP y SQL | NOT_EXECUTED | Reproducciones solo diseñadas |
 | Carrera de cobros coordinada | NOT_EXECUTED | Falta entorno y ejecución concurrente real |
 | Independencia, regresiones y compatibilidad | NOT_EXECUTED | Requiere ejecutar tests y fronteras |
-| Email del 12/11 | PENDIENTE | Confirmación separada tras publicación |
+| Email del 12/11 | PASS | Gmail envió a rammendez95@gmail.com; messageId `1a1ce9a369137aa6`, confirmado por lectura del mensaje |
 
 **Comandos orientativos** sobre un worktree y Docker/PostgreSQL independientes, JDK 21:
 ```powershell

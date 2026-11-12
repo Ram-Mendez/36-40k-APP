@@ -57,7 +57,7 @@ public class ReturnRepository {
         return jdbc.queryForObject(
                 "SELECT coalesce(sum(l.quantity),0) FROM sales_return r"
                         + " JOIN sales_return_line l ON l.return_id=r.id"
-                        + " WHERE r.order_id=? AND l.product_id=? AND r.status<>'REJECTED'",
+                        + " WHERE r.order_id=? AND l.product_id=?",
                 Long.class, orderId, productId);
     }
 

@@ -60,7 +60,7 @@ public class ReplenishmentService {
         boolean assigningSupplier = input.preferredSupplierId() != null
                 && (current.isEmpty() || !Objects.equals(
                         current.get().preferredSupplierId(),input.preferredSupplierId()));
-        if (assigningSupplier) repository.requireActiveSupplier(input.preferredSupplierId());
+        if (assigningSupplier && current.isEmpty()) repository.requireActiveSupplier(input.preferredSupplierId());
         boolean written = current.isEmpty() ? repository.create(productId,input) : repository.replace(productId,input);
         if (!written) throw changed();
         audit.record(current.isEmpty() ? "REPLENISHMENT_POLICY_CREATED" : "REPLENISHMENT_POLICY_UPDATED",

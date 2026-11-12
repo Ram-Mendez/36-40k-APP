@@ -83,7 +83,7 @@ public class ReportRepository {
                 jdbc.query(
                         "SELECT"
                             + " p.id,p.sku,p.name,coalesce(i.on_hand,0),coalesce(i.reserved,0),(SELECT"
-                            + " count(*) FROM stock_reservation r WHERE r.product_id=p.id)"
+                            + " count(*) FROM stock_reservation r)"
                                 + from
                                 + " ORDER BY coalesce(i.on_hand,0)-coalesce(i.reserved,0),p.id"
                                 + " LIMIT ? OFFSET ?",

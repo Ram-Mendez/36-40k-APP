@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_on": "2026-11-11",
+  "updated_on": "2026-11-12",
   "repository": "Ram-Mendez/36-40k-APP",
   "control_branch": "training/control",
   "reference_corpus": {
@@ -123,6 +123,67 @@
         "LAB-20261111-05"
       ],
       "expansion_base_used": "2026-11-10"
+    },
+    {
+      "date": "2026-11-12",
+      "baseline_sha": "ad23c49900c51202f8c3c965e5b153d9e925990d",
+      "branches": {
+        "incidents": {
+          "branch": "training/2026-11-12/incidents",
+          "code_commit": "5c40fc0c98b36dfd52c02b7f73fd0e80fdbd5a69",
+          "documentation_commit": "9268ff2725d9f70df319ba82e823e77973d451bc"
+        },
+        "team_a": {
+          "branch": "training/2026-11-12/team-a",
+          "commit": "e638c890b7a3bdda7dfa4b149b58e01ccc946871"
+        },
+        "team_b": {
+          "branch": "training/2026-11-12/team-b",
+          "commit": "b3371462edddaa1841337c53cc7d1dae908702e0"
+        }
+      },
+      "tickets": [
+        "LAB-20261112-01",
+        "LAB-20261112-02",
+        "LAB-20261112-03",
+        "LAB-20261112-04",
+        "LAB-20261112-05"
+      ],
+      "extra": [
+        "FEATURE-20261112-01",
+        "GIT-20261112-01"
+      ],
+      "topic_fingerprints": [
+        "cancel-partially-received-purchase",
+        "retry-return-after-rejection",
+        "reassign-preferred-supplier",
+        "low-stock-reservation-counter",
+        "concurrent-payments-same-invoice",
+        "purchase-draft-from-replenishment-proposals",
+        "return-status-sort-and-replenishment-priority-merge"
+      ],
+      "documentation": "docs/training/2026-11-12/TICKETS.md",
+      "validation": "PUBLISHED_UNVALIDATED",
+      "validation_evidence": "docs/training/2026-11-12/VALIDATION.md",
+      "blocking_conditions": [
+        "No Maven/PostgreSQL/Docker runtime in connector-backed execution; five bug reproductions, independent tests and startup not executed"
+      ],
+      "notification": {
+        "gmail_to": "rammendez95@gmail.com",
+        "subject": "Laboratorio backend 36–40k — 2026-11-12",
+        "status": "PENDING",
+        "gmail_message_id": null
+      },
+      "user_completion": "NOT_INFERRED",
+      "expansion_base_used": "2026-11-10",
+      "date_check": "Europe/Madrid 2026-11-12",
+      "write_confirmation": {
+        "branches_confirmed": true,
+        "ticket_files_read_back": true,
+        "code_files_confirmed": 5,
+        "team_a_files_confirmed": 1,
+        "team_b_files_confirmed": 1
+      }
     }
   ],
   "current_baseline": {

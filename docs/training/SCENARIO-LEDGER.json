@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated_on": "2026-11-11",
+  "updated_on": "2026-11-12",
   "repository": "Ram-Mendez/36-40k-APP",
-  "purpose": "Historical scenario families for selection and deduplication; no new incident assigned today and no solution map.",
+  "purpose": "Historical scenario families for novelty and repetition control. No student resolution inferred.",
   "policy": {
     "recent_batch_window": 10,
     "disallowed_repeat_key": [
@@ -371,6 +371,81 @@
       "user_completion": "NOT_INFERRED",
       "nearest_prior": "GIT-20261110-01",
       "novelty_rationale": "Cherry-pick de dos contratos de dominios separados, en lugar de merge conflict de catálogo."
+    },
+    {
+      "id": "LAB-20261112-01",
+      "batch_date": "2026-11-12",
+      "domain": "procurement",
+      "flow": "cancel-partially-received-purchase",
+      "invariant_family": "received-goods-state-consistency",
+      "fault_family": "workflow-transition-policy",
+      "boundary": "partial-receipt",
+      "observable_evidence": "HTTP-purchase-receipt-and-stock",
+      "source_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/9268ff2725d9f70df319ba82e823e77973d451bc/docs/training/2026-11-12/TICKETS.md",
+      "evidence_status": "DOCUMENT_INSPECTED_NOT_RUNTIME_VERIFIED",
+      "user_completion": "NOT_INFERRED",
+      "nearest_prior": "LAB-20261111-02",
+      "novelty_rationale": "No evalúa disponibilidad proyectada, sino consistencia de estado comercial después de un albarán."
+    },
+    {
+      "id": "LAB-20261112-02",
+      "batch_date": "2026-11-12",
+      "domain": "returns",
+      "flow": "retry-return-after-rejection",
+      "invariant_family": "unclaimed-returnable-quantity",
+      "fault_family": "historical-state-aggregation",
+      "boundary": "prior-rejected-request",
+      "observable_evidence": "HTTP-return-history-and-stock",
+      "source_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/9268ff2725d9f70df319ba82e823e77973d451bc/docs/training/2026-11-12/TICKETS.md",
+      "evidence_status": "DOCUMENT_INSPECTED_NOT_RUNTIME_VERIFIED",
+      "user_completion": "NOT_INFERRED",
+      "nearest_prior": "LAB-20261111-03",
+      "novelty_rationale": "El límite entre solicitudes cerradas y abiertas no es la disposición de mercancía al recibir."
+    },
+    {
+      "id": "LAB-20261112-03",
+      "batch_date": "2026-11-12",
+      "domain": "replenishment",
+      "flow": "reassign-preferred-supplier",
+      "invariant_family": "active-supplier-assignment",
+      "fault_family": "association-validation",
+      "boundary": "supplier-deactivated-before-reassignment",
+      "observable_evidence": "HTTP-policy-version-and-supplier",
+      "source_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/9268ff2725d9f70df319ba82e823e77973d451bc/docs/training/2026-11-12/TICKETS.md",
+      "evidence_status": "DOCUMENT_INSPECTED_NOT_RUNTIME_VERIFIED",
+      "user_completion": "NOT_INFERRED",
+      "nearest_prior": "LAB-20261111-02",
+      "novelty_rationale": "Valida cambios de asociación de proveedor, no cantidades entrantes pendientes."
+    },
+    {
+      "id": "LAB-20261112-04",
+      "batch_date": "2026-11-12",
+      "domain": "reports",
+      "flow": "low-stock-reservation-counter",
+      "invariant_family": "per-product-reservation-count",
+      "fault_family": "aggregation-scope",
+      "boundary": "two-products-one-has-reservation",
+      "observable_evidence": "HTTP-report-and-reservation-rows",
+      "source_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/9268ff2725d9f70df319ba82e823e77973d451bc/docs/training/2026-11-12/TICKETS.md",
+      "evidence_status": "DOCUMENT_INSPECTED_NOT_RUNTIME_VERIFIED",
+      "user_completion": "NOT_INFERRED",
+      "nearest_prior": "LAB-20261110-03",
+      "novelty_rationale": "Se contrasta una cardinalidad de reservas por artículo, no estados de ventas en un agregado."
+    },
+    {
+      "id": "LAB-20261112-05",
+      "batch_date": "2026-11-12",
+      "domain": "billing",
+      "flow": "concurrent-payments-same-invoice",
+      "invariant_family": "payment-total-bounded-by-balance",
+      "fault_family": "concurrency-serialization",
+      "boundary": "two-distinct-simultaneous-payments",
+      "observable_evidence": "concurrent-HTTP-and-ledger",
+      "source_url": "https://github.com/Ram-Mendez/36-40k-APP/blob/9268ff2725d9f70df319ba82e823e77973d451bc/docs/training/2026-11-12/TICKETS.md",
+      "evidence_status": "DOCUMENT_INSPECTED_NOT_RUNTIME_VERIFIED",
+      "user_completion": "NOT_INFERRED",
+      "nearest_prior": "LAB-20261111-04",
+      "novelty_rationale": "No analiza asientos revertidos; observa admisión simultánea y saldo tras dos cobros distintos."
     }
   ]
 }

@@ -131,7 +131,7 @@
         "incidents": {
           "branch": "training/2026-11-12/incidents",
           "code_commit": "5c40fc0c98b36dfd52c02b7f73fd0e80fdbd5a69",
-          "documentation_commit": "9268ff2725d9f70df319ba82e823e77973d451bc"
+          "documentation_commit": "3ec84a88fbee47c34499ab623def7fbb1073d7e7"
         },
         "team_a": {
           "branch": "training/2026-11-12/team-a",
@@ -171,8 +171,9 @@
       "notification": {
         "gmail_to": "rammendez95@gmail.com",
         "subject": "Laboratorio backend 36–40k — 2026-11-12",
-        "status": "PENDING",
-        "gmail_message_id": null
+        "status": "SENT",
+        "gmail_message_id": "1a1ce9a369137aa6",
+        "delivery_details": "Gmail send_email confirmed message 1a1ce9a369137aa6; read_email returned expected recipient, subject, SENT label and links"
       },
       "user_completion": "NOT_INFERRED",
       "expansion_base_used": "2026-11-10",
@@ -183,6 +184,15 @@
         "code_files_confirmed": 5,
         "team_a_files_confirmed": 1,
         "team_b_files_confirmed": 1
+      },
+      "delivery_check": {
+        "date": "2026-11-12",
+        "branch_count": 3,
+        "code_files": 7,
+        "ticket_ids": 5,
+        "documents_verified": true,
+        "gmail_verified": true,
+        "execution_validation": "NOT_EXECUTED"
       }
     }
   ],

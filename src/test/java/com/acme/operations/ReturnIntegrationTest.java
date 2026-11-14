@@ -66,15 +66,27 @@ class ReturnIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void cumulativeQuantitiesIncludePendingReturnsAndRejectionReleasesTheAllowance() throws Exception {
-        Sale sale = sale(4, "10.00");
+        Sale sale = sale(5, "10.00");
         long product = sale.products().getFirst();
-        JsonNode initial = request(sale.orderId(), List.of(line(product, 3)));
+        long stockBefore = balance(product, "on_hand");
+        JsonNode invoice = call(post("/api/v1/billing/invoices"), Map.of("orderId", sale.orderId(),
+                "dueDate", java.time.LocalDate.now().plusDays(30)), 201);
+        JsonNode initial = request(sale.orderId(), List.of(line(product, 4)));
         JsonNode excess = call(post("/api/v1/returns"), creation(sale.orderId(), UUID.randomUUID(),
-                List.of(line(product, 2))), 409);
+                List.of(line(product, 5))), 409);
         assertThat(excess.path("code").asText()).isEqualTo("RETURN_QUANTITY_EXCEEDED");
-        decision(initial.path("id").asLong(), "reject", 0, 200);
-        JsonNode replacement = request(sale.orderId(), List.of(line(product, 4)));
+        long initialId = initial.required("id").asLong();
+        decision(initialId, "reject", initial.required("version").asLong(), 200);
+        JsonNode replacement = request(sale.orderId(), List.of(line(product, 5)));
         long id = replacement.path("id").asLong();
+        assertThat(id).isNotEqualTo(initialId);
+        assertThat(replacement.required("status").asText()).isEqualTo("REQUESTED");
+        JsonNode rejected = call(get("/api/v1/returns/{id}", initialId), null, 200);
+        assertThat(rejected.required("status").asText()).isEqualTo("REJECTED");
+        assertThat(rejected.required("lines").get(0).required("quantity").asLong()).isEqualTo(4);
+        assertThat(balance(product, "on_hand")).isEqualTo(stockBefore);
+        JsonNode currentInvoice = call(get("/api/v1/billing/invoices/{id}", invoice.required("id").asLong()), null, 200);
+        assertThat(currentInvoice.required("credited").decimalValue()).isZero();
         decision(id, "approve", 0, 200);
         decision(id, "reject", 1, 409);
         call(post("/api/v1/returns"), creation(sale.orderId(), UUID.randomUUID(),

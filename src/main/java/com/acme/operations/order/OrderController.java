@@ -1,5 +1,10 @@
 package com.acme.operations.order;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.acme.operations.common.PageResponse;
 
 import jakarta.validation.Valid;
@@ -13,123 +18,135 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
-// Spring atiende las rutas de esta clase y serializa los valores devueltos como JSON.
+// Spring handles requests to these routes and serializes the response as JSON.
+@Tag(name = "Sales orders")
 @RestController
-// Prefijo común de las rutas; se combina con el mapping de cada método.
+// Each method path is relative to this base path.
 @RequestMapping("/api/v1/orders")
-// Activa validación de restricciones en los parámetros de estos métodos.
+// Validate the constraints on method parameters.
 @Validated
-// Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+// Only ADMIN and OPERATIONS can perform this operation.
 @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
 public class OrderController {
-    // Servicio al que el controlador delega las reglas y operaciones de negocio.
+    // The controller delegates business operations to this service.
     private final OrderService service;
-    // Coordina la llamada HTTP a shipping y después la finalización transaccional.
+    // Coordinates the HTTP call to shipping and then transactional termination.
     private final OrderCompletionService completion;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public OrderController(OrderService service, OrderCompletionService completion) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.service = service;
         this.completion = completion;
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "List customer orders")
     @GetMapping
-    // Spring Security permite consultas a ADMIN, OPERATIONS y READONLY.
+    // ADMIN, OPERATIONS and READONLY can read this resource.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
-    // Busca pedidos con filtros y orden; devuelve contenido y metadatos de página.
+    // Search for orders with filters and order; return content and page metadata.
     public PageResponse<OrderDtos.Order> search(
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) Long customerId,
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
+            @Parameter(description = "Filter by status.", schema = @Schema(allowableValues = {
+                    "DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED"}))
             @RequestParam(required = false) String status,
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            // Lee este parámetro de la URL y usa el valor indicado cuando falta.
+            // Use the default value when this query parameter is omitted.
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
-        // Busca pedidos con filtros y orden; devuelve contenido y metadatos de página.
+        // Search for orders with filters and order; return content and page metadata.
         return service.search(customerId, status, page, size, sort);
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "View an order and its lines")
     @GetMapping("/{id}")
-    // Recupera el recurso por id; si falta, el servicio interrumpe el flujo con un error. El id lo toma Spring de la
-    // ruta.
+    // Look up the resource by ID. The service reports an error if it is missing.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
     public OrderDtos.Order get(@PathVariable long id) {
-        // Recupera el recurso por id; si falta, el servicio interrumpe el flujo con un error.
+        // Look up the resource by ID. The service reports an error if it is missing.
         return service.get(id);
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Create a draft sales order")
     @PostMapping
-    // Delega el alta y recibe el objeto creado con sus datos generados. Spring convierte y valida el JSON antes de
-    // entrar.
+    // Spring reads and validates the JSON. The service creates the record and returns its generated fields.
     public ResponseEntity<OrderDtos.Order> create(@Valid @RequestBody OrderDtos.Create request) {
-        // Delega el alta y recibe el objeto creado con sus datos generados.
+        // The service creates the record and returns its generated fields.
         var result = service.create(request);
-        // Devuelve 201, la URL del recurso en Location y su DTO como cuerpo JSON.
+        // Return HTTP 201 with the resource URL in Location and its representation in the JSON body.
         return ResponseEntity.created(URI.create("/api/v1/orders/" + result.id())).body(result);
     }
 
-    // Expone una actualización HTTP PUT de la ruta indicada.
+    // Handle PUT requests to this route.
+    @Operation(summary = "Change the customer on a draft order")
     @PutMapping("/{id}")
-    // Delega la edición; el servicio valida antes de persistir los nuevos datos.
+    // The service validates the changes before saving them.
     public OrderDtos.Order update(
-            // Spring toma el identificador de la ruta; @RequestBody, si aparece, se obtiene del JSON.
+            // Spring reads the ID from the URL and any request body from JSON.
             @PathVariable long id, @Valid @RequestBody OrderDtos.Create request) {
-        // Delega la edición; el servicio valida antes de persistir los nuevos datos.
+        // The service validates the changes before saving them.
         return service.update(id, request);
     }
 
-    // Expone una actualización HTTP PUT de la ruta indicada.
+    // Handle PUT requests to this route.
+    @Operation(summary = "Set the quantity ordered for a product")
     @PutMapping("/{id}/lines/{productId}")
-    // Fija la cantidad de un producto en el pedido; las reglas se comprueban en el servicio.
+    // Set the amount of a product on order; rules are checked in service.
     public OrderDtos.Order setLine(
-            // Spring toma el identificador de la ruta; @RequestBody, si aparece, se obtiene del JSON.
+            // Spring reads the ID from the URL and any request body from JSON.
             @PathVariable long id,
-            // Spring toma el identificador de la ruta; @RequestBody, si aparece, se obtiene del JSON.
+            // Spring reads the ID from the URL and any request body from JSON.
             @PathVariable long productId,
-            // Spring convierte el JSON al DTO y valida sus restricciones antes de ejecutar el método.
+            // Spring converts the JSON to the DTO and validates its restrictions before running the method.
             @Valid @RequestBody OrderDtos.SetLine request) {
-        // Fija la cantidad de un producto en el pedido; las reglas se comprueban en el servicio.
+        // Set the amount of a product on order; rules are checked in service.
         return service.setLine(id, productId, request);
     }
 
-    // Expone HTTP DELETE; el cuerpo del método determina si elimina una línea o desactiva un recurso.
+    // Handle a DELETE request to remove an item or deactivate the resource.
+    @Operation(summary = "Remove a product from the order")
     @DeleteMapping("/{id}/lines/{productId}")
-    // Retira ese producto del pedido y recalcula su total en el servicio. El id lo toma Spring de la ruta.
+    // Remove that product from the order and recalculate its total in the service. The id takes it Spring from the
+    // route.
     public OrderDtos.Order removeLine(@PathVariable long id, @PathVariable long productId) {
-        // Retira ese producto del pedido y recalcula su total en el servicio.
+        // Remove that product from the order and emphasize its total in the service.
         return service.removeLine(id, productId);
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Confirm the order and reserve stock",
+            description = "Reserve the requested units for this customer order.")
     @PostMapping("/{id}/confirm")
-    // Confirma el pedido y reserva sus productos dentro de la transacción del servicio. El id lo toma Spring de la
-    // ruta.
+    // Confirm the order and book your products within the service transaction. The id takes Spring from the route.
     public OrderDtos.Order confirm(@PathVariable long id) {
-        // Confirma el pedido y reserva sus productos dentro de la transacción del servicio.
+        // Confirm the order and book your products within the service transaction.
         return service.confirm(id);
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Cancel the order and release its reservations")
     @PostMapping("/{id}/cancel")
-    // Cancela el pedido y libera reservas cuando corresponde. El id lo toma Spring de la ruta.
+    // Cancel the order and release reservations when appropriate. The id takes Spring from the route.
     public OrderDtos.Order cancel(@PathVariable long id) {
-        // Cancela el pedido y libera reservas cuando corresponde.
+        // Cancel the order and release reservations when appropriate.
         return service.cancel(id);
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Complete the sale and record the shipment",
+            description = "Obtain a shipping quote and record the outbound stock movement.")
     @PostMapping("/{id}/complete")
-    // Primero obtiene shipping y luego completa el pedido con sus controles de estado y versión. El id lo toma Spring
-    // de la ruta.
+    // First you get shipping and then complete the order with your status and version controls. The id takes
+    // Spring from the route.
     public OrderDtos.Order complete(@PathVariable long id) {
-        // Primero obtiene shipping y luego completa el pedido con sus controles de estado y versión.
+        // First you get shipping and then complete the order with your status and version controls.
         return completion.complete(id);
     }
 }

@@ -6,32 +6,32 @@ import org.springframework.http.HttpStatus;
 
 import java.util.Set;
 
-// Utilidad compartida para validar paginación y construir el objeto de Spring Data.
+// Shared utility to validate pagination and build the object of Spring Data.
 public final class PageRequests {
-    // Constructor privado: se usa el método estático of, no se crean instancias.
+    // This class groups related types or utilities and does not need an instance.
     private PageRequests() {}
 
-    // Convierte parámetros de la API en una solicitud de página válida.
+    // Convert API parameters into a valid page request.
     public static PageRequest of(
             int page, int size, String sort, String direction, Set<String> allowed) {
-        // Valida rango, tamaño, columna permitida y dirección antes de construir el orden.
+        // Valid range, size, allowed column and direction before building the order.
         if (page < 0
                 || page > 1_000_000
                 || size < 1
                 || size > 100
                 || !allowed.contains(sort)
                 || !(direction.equalsIgnoreCase("asc") || direction.equalsIgnoreCase("desc"))) {
-            // Una opción inválida se comunica como 400 INVALID_PAGE.
+            // An invalid option is reported as 400 INVALID_PAGE.
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_PAGE",
                     "Invalid pagination or sort; size must be 1..100");
         }
-        // Crea el orden pedido después de validar tanto columna como dirección.
+        // Create the order after validating both column and address.
         Sort ordering = Sort.by(Sort.Direction.fromString(direction), sort);
-        // Añade id como desempate para que las páginas tengan un orden estable.
+        // Add how to unload so that the pages have a stable order.
         if (!sort.equals("id")) ordering = ordering.and(Sort.by("id"));
-        // PageRequest usa índices desde cero: page=2 representa la tercera página.
+        // PageRequest uses indices from scratch: page = 2 represents the third page.
         return PageRequest.of(page, size, ordering);
     }
 }

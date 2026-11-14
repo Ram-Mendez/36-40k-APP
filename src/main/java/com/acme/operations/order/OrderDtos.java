@@ -1,5 +1,7 @@
 package com.acme.operations.order;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -8,56 +10,56 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-// Agrupa contratos de entrada y salida del pedido; no es una entidad ni un repositorio.
+// It is a group of contracts for the entry and exit of the order; it is not an entity or a repository.
 public final class OrderDtos {
-    // Constructor privado: esta clase agrupa tipos o utilidades y no necesita instancias.
+    // This class groups related types or utilities and does not need an instance.
     private OrderDtos() {}
 
-    // Para crear basta customerId; debe ser no nulo y positivo, y el servicio comprueba que exista.
-    public record Create(@NotNull @Min(1) Long customerId) {}
+    // To create an order, supply a positive customerId. The service checks that the customer exists.
+    public record Create(@NotNull @Min(1) @Schema(description = "ID of the customer placing the order.") Long customerId) {}
 
-    // Entrada de una línea: la cantidad es positiva y limitada; el producto viene de la URL.
-    public record SetLine(@NotNull @Min(1) @Max(1000000) Long quantity) {}
+    // A line entry: the amount is positive and limited; the product comes from the URL.
+    public record SetLine(@NotNull @Min(1) @Max(1000000) @Schema(description = "Number of units in this line.") Long quantity) {}
 
-    // Salida de una línea: producto, unidades y precio pactado para ese pedido.
+    // Output from a line: product, units and price agreed for that order.
     public record Line(
-            // Identificador propio de este registro, distinto de las referencias a cliente o producto.
+            // Unique ID of this record.
             long id,
-            // Referencia al producto del catálogo, no al id del pedido.
-            long productId,
-            // Código de catálogo del producto.
+            // ID of the catalog product.
+            @Schema(description = "ID of the catalog product.") long productId,
+            // Product SKU.
             String sku,
-            // Nombre descriptivo del producto.
+            // Product name.
             String productName,
-            // Unidades de este producto en la línea.
-            long quantity,
-            // Precio unitario pactado, que puede diferir del precio actual del catálogo.
-            BigDecimal unitPrice,
-            // Importe de esta línea: cantidad multiplicada por precio unitario.
+            // Units of this product on the line.
+            @Schema(description = "Number of units in this line.") long quantity,
+            // Unit price agreed, which may differ from the current price of the catalogue.
+            @Schema(description = "Selling price in EUR per unit.") BigDecimal unitPrice,
+            // Amount of this line: quantity multiplied by unit price.
             BigDecimal lineTotal) {}
 
-    // Salida completa: reúne la cabecera del pedido y sus líneas, no se rellena automáticamente.
+    // Full output: it gathers the order header and its lines, not automatically filled.
     public record Order(
-            // Identificador propio de este registro, distinto de las referencias a cliente o producto.
+            // Unique ID of this record.
             long id,
-            // Referencia al cliente al que pertenece el pedido.
-            long customerId,
-            // Nombre del cliente obtenido al consultar su relación con el pedido.
+            // Reference to the customer to whom the order belongs.
+            @Schema(description = "ID of the customer placing the order.") long customerId,
+            // Name of the client obtained when consulting your relationship to the order.
             String customerName,
-            // Estado del pedido; determina qué operaciones de negocio permite el servicio.
+            // Order status; determines which business operations the service allows.
             String status,
-            // Importe de las líneas del pedido; el envío tiene su campo separado.
+            // Amount of the order lines; the shipment has its separate field.
             BigDecimal total,
-            // Versión leída del recurso para detectar modificaciones posteriores.
-            long version,
-            // Referencia de la cotización de envío, ausente antes de completar.
+            // Version read by the caller. It is used to detect later changes.
+            @Schema(description = "Current record version used to detect concurrent changes.") long version,
+            // Reference of the shipping quotation, absent before completion.
             String shippingReference,
-            // Coste cotizado del envío, separado del total de productos.
+            // Quota cost of shipping, separated from total products.
             BigDecimal shippingCost,
-            // Instante en que se creó el registro.
+            // Record creation time.
             Instant createdAt,
-            // Instante de la última actualización registrada.
+            // Instant of the last recorded update.
             Instant updatedAt,
-            // Lista de productos del pedido; puede estar vacía al crearlo.
+            // List of order products; it may be empty when creating it.
             List<Line> lines) {}
 }

@@ -1,11 +1,11 @@
 package com.acme.operations.security;
 
-// Conjunto cerrado de permisos funcionales; Spring los expresa como autoridades ROLE_...
+// Closed set of functional permissions; Spring expresses them as ROLE authorities _...
 public enum Role {
-    // Administración de usuarios y acceso a operaciones de negocio.
+    // User management and access to business operations.
     ADMIN,
-    // Operaciones de catálogo, inventario y pedidos sin administrar cuentas.
+    // Catalogue, inventory and order operations without account management.
     OPERATIONS,
-    // Acceso a consultas permitidas sin modificar datos.
+    // Access to queries allowed without changing data.
     READONLY
 }

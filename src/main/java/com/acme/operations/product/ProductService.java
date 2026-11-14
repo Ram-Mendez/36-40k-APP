@@ -14,52 +14,53 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
-// Spring configura lectura por defecto; readOnly orienta la persistencia, no sustituye permisos.
+// Use read-only transactions by default. Spring Security checks access separately.
 @Transactional(readOnly = true)
 public class ProductService {
-    // Acceso a persistencia separado de las reglas que coordina este servicio.
+    // The repository handles persistence for this service.
     private final ProductRepository repository;
-    // Servicio de auditoría compartido para registrar las acciones de esta operación.
+    // Use the shared audit service to record this operation.
     private final AuditService audit;
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public ProductService(ProductRepository repository, AuditService audit, JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.repository = repository;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.audit = audit;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // Lista productos aplicando filtros y paginación, sin modificar el catálogo.
+    // List of products using filters and paging, without changing the catalogue.
     public PageResponse<ProductDtos.View> list(
             int page, int size, String sort, String direction, String search, Boolean active) {
-        // Valida tamaño, página y columnas permitidas antes de construir el Pageable.
+        // Valid size, page and columns allowed before building the Pageable.
         var pageable =
                 PageRequests.of(page, size, sort, direction, Set.of("id", "name", "unitPrice", "sku", "active"));
-        // Limita la longitud de búsqueda para mantener controlada la entrada.
+        // Limit the search length to keep the input under control.
         if (search != null && search.length() > 200)
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_SEARCH",
                     "Search is limited to 200 characters");
-        // Spring Data ejecuta la consulta que describe esta Specification.
+        // Spring Data runs the query that describes this Specification.
         var result =
                 repository.findAll(
                         (root, query, cb) -> {
-                            // Acumula condiciones; solo se añaden los filtros que llegaron en la petición.
+                            // It accumulates conditions; only the filters that arrived in the request are added.
                             var predicates = new ArrayList<Predicate>();
-                            // Boolean permite distinguir entre sin filtro (null), activo y desactivado.
+                            // Boolean allows to distinguish between no filter (null), active and disabled.
                             if (active != null)
                                 predicates.add(cb.equal(root.get("active"), active));
-                            // Ignora búsquedas vacías; una búsqueda real se compara sin distinguir mayúsculas.
+                            // It ignores empty searches; a real search is compared without distinguishing capital
+                            // letters.
                             if (search != null && !search.isBlank()) {
-                                // Escapa !, % y _ para que el texto del usuario no se interprete como comodines SQL.
+                                // Escape !, % and _ so user input is treated as literal text in SQL.
                                 String pattern =
                                         "%"
                                                 + search.toLowerCase(Locale.ROOT)
@@ -67,99 +68,99 @@ public class ProductService {
                                                         .replace("%", "!%")
                                                         .replace("_", "!_")
                                                 + "%";
-                                // Busca coincidencias en nombre o SKU; basta con que coincida uno de ellos.
+                                // It seeks coincidences on behalf of or SKU; it simply matches one of them.
                                 predicates.add(
                                         cb.or(
                                                 cb.like(cb.lower(root.get("name")), pattern, '!'),
                                                 cb.like(cb.lower(root.get("sku")), pattern, '!')));
                             }
-                            // Combina los filtros con AND; si no hay filtros no restringe los resultados.
+                            // Combine filters with AND; if there are no filters it does not restrict the results.
                             return cb.and(predicates.toArray(Predicate[]::new));
                         },
                         pageable);
-        // Transforma entidades a DTO públicos y conserva los totales de paginación.
+        // Map the entities to public DTOs and preserve the pagination totals.
         return PageResponse.from(result.map(ProductDtos.View::of));
     }
 
-    // Busca el producto por id y devuelve su representación de API.
+    // Find the product per id and return your API representation.
     public ProductDtos.View get(long id) {
-        // find lanza 404 si falta; View.of copia los campos que se enviarán al cliente.
+        // find launches 404 if missing; View.of copies the fields to be sent to the customer.
         return ProductDtos.View.of(find(id));
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Crea catálogo y saldo inicial en una sola transacción.
+    // Create catalog and start balance in a single transaction.
     public ProductDtos.View create(ProductDtos.Input input) {
-        // saveAndFlush envía el INSERT y obtiene el id; flush todavía no es commit.
+        // saveAndFlush sends the INSERT and gets the id; flush is not yet committed.
         var entity = repository.saveAndFlush(new Product(input));
-        // Crea el inventario del producto con físico, reservado y versión en cero.
+        // It creates the product inventory with physical, reserved and zero version.
         jdbc.update(
                 "INSERT INTO inventory_balance(product_id,on_hand,reserved,version) VALUES"
                     + " (?,0,0,0)",
                 entity.getId());
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("PRODUCT_CREATED", "PRODUCT", entity.getId().toString(), "Created product");
-        // Devuelve la vista creada; Spring confirma al salir correctamente del método transaccional.
+        // Returns the created view; Spring confirms the correct exit of the transactional method.
         return ProductDtos.View.of(entity);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Actualiza el producto solo si la versión del cliente sigue siendo válida.
+    // It updates the product only if the customer's version remains valid.
     public ProductDtos.View update(long id, ProductDtos.Input input) {
-        // Carga la entidad gestionada por JPA; si no existe, se devuelve 404.
+        // Load the entity managed by JPA; if it does not exist, 404 is returned.
         var entity = find(id);
-        // Para actualizar se exige la versión; para crear el DTO permite omitirla.
+        // To update the version is required; to create the DTO it allows to omit it.
         if (input.version() == null)
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST, "VERSION_REQUIRED", "Provide current resource version");
-        // Detecta que el cliente está editando una versión antigua del producto.
+        // It detects that the customer is editing an old version of the product.
         if (input.version() != entity.getVersion())
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "CONCURRENT_MODIFICATION",
                     "Resource changed; reload and retry");
-        // Modifica la entidad gestionada; JPA detectará sus cambios al sincronizar.
+        // Modify the managed entity; JPA will detect its changes when synchronizing.
         entity.update(input);
-        // Envía el UPDATE; @Version permite que JPA detecte otra escritura concurrente.
+        // Send the UPDATE; @Version allows JPA to detect another concurrent writing.
         repository.flush();
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("PRODUCT_UPDATED", "PRODUCT", Long.toString(id), "Updated product");
-        // Devuelve los campos y versión después de sincronizar la actualización.
+        // Returns the fields and version after synchronizing the update.
         return ProductDtos.View.of(entity);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Desactiva sin borrar el producto para conservar referencias e historial.
+    // Disable without deleting the product to keep references and history.
     public void deactivate(long id) {
-        // Carga la entidad que se va a desactivar.
+        // Load the entity that will be deactivated.
         var entity = find(id);
-        // Si ya estaba desactivada no repite escritura ni auditoría.
+        // If it was already disabled, it does not repeat writing or auditing.
         if (entity.isActive()) {
-            // Cambia active a false en la entidad gestionada.
+            // It changes active to false in the managed entity.
             entity.deactivate();
-            // Sincroniza el cambio con PostgreSQL, todavía dentro de la transacción.
+            // Synchronize the change with PostgreSQL, still within the transaction.
             repository.flush();
-            // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+            // Write the audit event in the same transaction as the change. Both roll back together.
             audit.record(
                     "PRODUCT_DEACTIVATED", "PRODUCT", Long.toString(id), "Deactivated product");
         }
     }
 
-    // Centraliza la búsqueda y el error cuando no existe el producto.
+    // Centralize the search and error when the product does not exist.
     private Product find(long id) {
-        // Spring Data busca por clave primaria; el Optional vacío se convierte en 404.
+        // Spring Data seeks for primary key; the Optional vacuum becomes 404.
         return repository
                 .findById(id)
                 .orElseThrow(

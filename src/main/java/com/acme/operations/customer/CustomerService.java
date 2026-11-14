@@ -13,47 +13,47 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
-// Spring configura lectura por defecto; readOnly orienta la persistencia, no sustituye permisos.
+// Use read-only transactions by default. Spring Security checks access separately.
 @Transactional(readOnly = true)
 public class CustomerService {
-    // Acceso a persistencia separado de las reglas que coordina este servicio.
+    // The repository handles persistence for this service.
     private final CustomerRepository repository;
-    // Servicio de auditoría compartido para registrar las acciones de esta operación.
+    // Use the shared audit service to record this operation.
     private final AuditService audit;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public CustomerService(CustomerRepository repository, AuditService audit) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.repository = repository;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.audit = audit;
     }
 
-    // Lista clientes con filtros y orden permitido, conservando los totales de página.
+    // List customers with filters and allowed order, keeping the page totals.
     public PageResponse<CustomerDtos.View> list(
             int page, int size, String sort, String direction, String search, Boolean active) {
-        // Valida límites y permite ordenar solo por id o nombre.
+        // Valid limits and allows to order only by id or name.
         var pageable = PageRequests.of(page, size, sort, direction, Set.of("id", "name"));
-        // Rechaza un texto de búsqueda excesivamente largo.
+        // It rejects an excessively long search text.
         if (search != null && search.length() > 200)
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_SEARCH",
                     "Search is limited to 200 characters");
-        // Spring Data ejecuta la consulta descrita por esta Specification.
+        // Spring Data runs the query described by this Specification.
         var result =
                 repository.findAll(
                         (root, query, cb) -> {
-                            // Reúne las condiciones opcionales que se aplicarán al SQL generado.
+                            // Gather the optional conditions to be applied to the generated SQL.
                             var predicates = new ArrayList<Predicate>();
-                            // Solo filtra por active cuando se envió ese parámetro.
+                            // It only filters per active when that parameter was sent.
                             if (active != null)
                                 predicates.add(cb.equal(root.get("active"), active));
-                            // Una búsqueda no vacía añade una comparación parcial sin distinguir mayúsculas.
+                            // A non-empty search adds a partial comparison without distinguishing capital letters.
                             if (search != null && !search.isBlank()) {
-                                // Escapa los comodines para buscar el texto literalmente dentro de nombre o taxId.
+                                // Escape SQL wildcards so the search matches literal text in the name or tax ID.
                                 String pattern =
                                         "%"
                                                 + search.toLowerCase(Locale.ROOT)
@@ -61,7 +61,7 @@ public class CustomerService {
                                                         .replace("%", "!%")
                                                         .replace("_", "!_")
                                                 + "%";
-                                // El cliente coincide si su nombre o identificador fiscal contiene el patrón.
+                                // The client agrees if his name or tax identifier contains the pattern.
                                 predicates.add(
                                         cb.or(
                                                 cb.like(cb.lower(root.get("name")), pattern, '!'),
@@ -70,89 +70,89 @@ public class CustomerService {
                                                         pattern,
                                                         '!')));
                             }
-                            // Une los filtros con AND; cada condición añadida debe cumplirse.
+                            // Unite filters with AND; each added condition must be met.
                             return cb.and(predicates.toArray(Predicate[]::new));
                         },
                         pageable);
-        // Convierte entidades a DTO y conserva tamaño, página y conteos.
+        // Convert entities to DTO and retain size, page and counting.
         return PageResponse.from(result.map(CustomerDtos.View::of));
     }
 
-    // Recupera un cliente; find genera 404 si el id no existe.
+    // It recovers a client; find generates 404 if the id does not exist.
     public CustomerDtos.View get(long id) {
-        // Construye la vista pública con los datos de la entidad.
+        // Build public view with entity data.
         return CustomerDtos.View.of(find(id));
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Crea un cliente usando las reglas de normalización de Customer.
+    // Create a client using Customer's normalization rules.
     public CustomerDtos.View create(CustomerDtos.Input input) {
-        // Inserta y sincroniza para obtener el id; aún falta el commit de la transacción.
+        // Insert and synchronize to get the id; the transaction commitment is still missing.
         var entity = repository.saveAndFlush(new Customer(input));
 
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("CUSTOMER_CREATED", "CUSTOMER", entity.getId().toString(), "Created customer");
-        // Entrega el DTO de la cuenta creada, sin exponer una entidad JPA al controlador.
+        // Deliver the DTO of the account created, without exposing a JPA entity to the controller.
         return CustomerDtos.View.of(entity);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Actualiza datos del cliente con control de versión.
+    // Update customer data with version control.
     public CustomerDtos.View update(long id, CustomerDtos.Input input) {
-        // Carga la entidad gestionada que JPA supervisará dentro de la transacción.
+        // Load the managed entity that JPA will supervise within the transaction.
         var entity = find(id);
-        // Actualizar requiere enviar la versión leída por el cliente.
+        // Update requires sending the version read by the client.
         if (input.version() == null)
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST, "VERSION_REQUIRED", "Provide current resource version");
-        // Si la versión cambió, devuelve 409 para evitar sobrescribir datos recientes.
+        // If the version changed, it returns 409 to avoid overwriting recent data.
         if (input.version() != entity.getVersion())
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "CONCURRENT_MODIFICATION",
                     "Resource changed; reload and retry");
-        // Aplica los datos a la entidad; la persistencia se sincroniza a continuación.
+        // Apply the data to the entity; persistence is synchronized below.
         entity.update(input);
-        // Envía los cambios y permite detectar conflictos mediante @Version.
+        // It sends the changes and allows you to detect conflicts by @Version.
         repository.flush();
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("CUSTOMER_UPDATED", "CUSTOMER", Long.toString(id), "Updated customer");
-        // Devuelve la vista del cliente ya sincronizada.
+        // Returns the customer's view already synchronized.
         return CustomerDtos.View.of(entity);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Desactiva sin borrar para conservar los pedidos vinculados al cliente.
+    // Undeleted disable to keep orders linked to the customer.
     public void deactivate(long id) {
-        // Carga la entidad o lanza 404 si el cliente no existe.
+        // Load the entity or launch 404 if the customer does not exist.
         var entity = find(id);
-        // Evita repetir cambios y auditoría cuando ya estaba desactivado.
+        // It avoids repeating changes and audit when it was already off.
         if (entity.isActive()) {
-            // Marca active=false en memoria dentro de la transacción.
+            // Active mark = misplaced in memory within the transaction.
             entity.deactivate();
-            // JPA sincroniza ese cambio con la base de datos.
+            // JPA synchronizes that change with the database.
             repository.flush();
-            // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+            // Write the audit event in the same transaction as the change. Both roll back together.
             audit.record(
                     "CUSTOMER_DEACTIVATED", "CUSTOMER", Long.toString(id), "Deactivated customer");
         }
     }
 
-    // Centraliza la búsqueda y el error de cliente inexistente.
+    // It centralizes the search and error of non-existent customer.
     private Customer find(long id) {
-        // El Optional de Spring Data se convierte en entidad o en una excepción 404.
+        // The Spring Data Optional becomes an entity or an exception 404.
         return repository
                 .findById(id)
                 .orElseThrow(

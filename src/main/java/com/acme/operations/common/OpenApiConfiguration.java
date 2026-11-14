@@ -9,24 +9,24 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-// Spring procesa esta configuración para registrar los objetos definidos con @Bean.
+// Spring uses this configuration to register the beans defined here.
 @Configuration
 public class OpenApiConfiguration {
-    // Spring invoca este método para registrar su resultado y poder inyectarlo en otros componentes.
+    // Spring registers the returned object as a bean so other components can inject it.
     @Bean
-    // Describe la API para Swagger; esta documentación no aplica permisos de ejecución.
+    // Configure the API documentation shown in Swagger.
     OpenAPI openAPI() {
-        // Construye los metadatos visibles en la documentación interactiva.
+        // Set the title and description shown in Swagger UI.
         return new OpenAPI()
                 .info(
                         new Info()
                                 .title("Business Operations API")
                                 .version("1.0.0")
                                 .description(
-                                        "B2B distribution: catalog, inventory, orders, reservations"
-                                            + " and audit. Monetary amounts in EUR, excluding"
+                                        "Catalog, inventory, sales orders, purchases, replenishment,"
+                                            + " returns, billing, reports and audit. Monetary amounts are in EUR, excluding"
                                             + " taxes."))
-                // Declara el esquema Bearer para poder enviar un JWT desde Swagger UI.
+                // Let Swagger UI send a JWT with authenticated requests.
                 .components(
                         new Components()
                                 .addSecuritySchemes(
@@ -35,7 +35,7 @@ public class OpenApiConfiguration {
                                                 .type(SecurityScheme.Type.HTTP)
                                                 .scheme("bearer")
                                                 .bearerFormat("JWT")))
-                // Indica el requisito de seguridad en OpenAPI; la protección real está en Spring Security.
+                // It indicates the security requirement in OpenAPI; the real protection is in Spring Security.
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 }

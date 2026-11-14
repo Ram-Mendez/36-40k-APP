@@ -22,18 +22,18 @@ import java.math.RoundingMode;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
-// Spring crea y gestiona este componente para poder inyectarlo donde se necesita.
+// Spring manages this component and injects it wherever needed.
 @Component
 public class ShippingClient {
-    // Logger de diagnóstico; informa del fallo sin volcar la respuesta remota completa.
+    // Diagnostic Logger; reports failure without reversing the complete remote response.
     private static final Logger log = LoggerFactory.getLogger(ShippingClient.class);
-    // Cliente HTTP reutilizable con URL base y límites de espera ya configurados.
+    // Reusable HTTP client with already configured base URL and waiting limits.
     private final CarrierApi client;
 
-    // DTO de cotización: referencia y coste recibidos del servicio externo.
+    // DTO: reference and cost received from the external service.
     public record Quote(String reference, BigDecimal cost) {}
 
-    // Spring implementa este contrato HTTP y convierte la respuesta en Quote.
+    // Spring implements this HTTP contract and turns the response into Quote.
     public interface CarrierApi {
         @GetExchange("/quotes")
         Quote quote(@RequestParam("orderId") long orderId,
@@ -41,34 +41,34 @@ public class ShippingClient {
                     @RequestHeader(value = "X-Request-ID", required = false) String requestId);
     }
 
-    // Spring pasa la URL y los timeouts de configuración al construir el cliente.
+    // Spring passes the URL and the configuration timeouts when building the client.
     public ShippingClient(
-            // La URL base se define fuera del código para poder cambiar el destino por entorno.
+            // The base URL is defined outside the code to be able to change the destination by environment.
             @Value("${shipping.base-url}") String baseUrl,
-            // Límite para abrir conexión; el siguiente parámetro limita la espera de lectura.
+            // Limit to open connection; the following parameter limits reading wait.
             @Value("${shipping.connect-timeout:2s}") Duration connectTimeout,
             @Value("${shipping.read-timeout:3s}") Duration readTimeout) {
-        // Crea el transporte HTTP con tiempo máximo para establecer conexión.
+        // It creates HTTP transport with maximum time to establish connection.
         var factory =
                 new JdkClientHttpRequestFactory(
                         HttpClient.newBuilder().connectTimeout(connectTimeout).build());
-        // Limita la espera de respuesta para evitar que la petición quede pendiente indefinidamente.
+        // It limits the waiting for a response to prevent the request from remaining pending indefinitely.
         factory.setReadTimeout(readTimeout);
-        // Construye el cliente; todavía no llama al servicio remoto.
+        // It builds the client; it still doesn't call the remote service.
         var restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
         client = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
                 .build().createClient(CarrierApi.class);
     }
 
-    // Solicita una cotización de solo lectura; este método no crea un envío real.
+    // It requests a reading-only quotation; this method does not create a real shipment.
     public Quote quote(long orderId, BigDecimal amount) {
-        // Agrupa fallos de transporte y de contenido para traducirlos a un error de negocio.
+        // It groups transport and content failures to translate them into a business error.
         try {
-            // Recupera el identificador de trazabilidad de la petición actual.
+            // Recovers the traceability identifier of the current request.
             String requestId = MDC.get("requestId");
-            // Spring envía los parámetros y convierte automáticamente el JSON en Quote.
+            // Spring sends the parameters and automatically turns the JSON into Quote.
             Quote quote = client.quote(orderId, amount, requestId);
-            // Rechaza cotizaciones incompletas, referencias inválidas o importes fuera del formato admitido.
+            // It rejects incomplete quotations, invalid references or amounts outside the accepted format.
             if (quote == null
                     || quote.reference() == null
                     || quote.reference().isBlank()
@@ -77,18 +77,18 @@ public class ShippingClient {
                     || quote.cost().signum() < 0
                     || quote.cost().scale() > 2
                     || quote.cost().compareTo(new BigDecimal("999999999999.99")) > 0)
-                // Un contenido inválido entra en el catch igual que un fallo HTTP.
+                // An invalid content enters the catch just like an HTTP failure.
                 throw new IllegalArgumentException("Invalid shipping quote");
-            // Devuelve la cotización validada para que el servicio pueda completar el pedido.
+            // Returns the validated quote so that the service can complete the order.
             return quote;
-        // Traduce fallos HTTP o de validación a un 503; no hace reintentos automáticos.
+        // Translates HTTP or validation errors to a 503; does not make automatic reattempts.
         } catch (RestClientException | IllegalArgumentException ex) {
-            // Registra pedido y tipo de error para diagnóstico.
+            // Record order and type of error for diagnosis.
             log.warn(
                     "Shipping quote failed for order {}: {}",
                     orderId,
                     ex.getClass().getSimpleName());
-            // El handler devuelve 503; el llamador no continúa al tramo que consume inventario.
+            // The handler returns 503; the caller does not continue to the section that consumes inventory.
             throw new BusinessException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "SHIPPING_UNAVAILABLE",

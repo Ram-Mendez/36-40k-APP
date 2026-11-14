@@ -1,0 +1,62 @@
+<section class="guide" aria-labelledby="lab-title">
+  <h1 id="lab-title">November 12 warehouse lab</h1>
+  <label>Exercise
+    <select [ngModel]="exerciseIndex()" (ngModelChange)="selectExercise($event)" [disabled]="busy()">
+      @for (option of exercises; track option.title; let i = $index) {
+        <option [ngValue]="i">{{ option.title }}</option>
+      }
+    </select>
+  </label>
+  <p>{{ exercise.scenario }}</p>
+  <div class="steps">
+    <nav aria-label="Exercise steps">
+      @for (option of exercise.steps; track $index; let i = $index) {
+        <button type="button" [attr.aria-current]="stepIndex() === i ? 'step' : null"
+          [disabled]="busy()" (click)="selectStep(i)">{{ i + 1 }}. {{ option.title }}</button>
+      }
+    </nav>
+    <article>
+      <h2>{{ step.title }}</h2>
+      <code>{{ step.method }} {{ stepPath }}</code>
+      <form (ngSubmit)="run()">
+        @for (key of keys; track key) {
+          <label>{{ labels[key] }}
+            <input [name]="key" [attr.name]="key" [(ngModel)]="fields[key]" [type]="key === 'date' ? 'date' : 'text'"
+              [attr.inputmode]="isNumeric(key) ? 'decimal' : null" [disabled]="busy()" required>
+          </label>
+          @if (key === 'uuid') {
+            <button class="secondary" type="button" (click)="newRequestId()" [disabled]="busy()">Generate another request ID</button>
+          }
+        }
+        @if (step.body) {
+          <details><summary>View request data</summary><pre>{{ requestBody | json }}</pre></details>
+        }
+        @if (isPurchaseDraft && draftAvailability() === 'unavailable') {
+          <p>This server does not support generating purchase drafts yet.</p>
+        } @else if (isPurchaseDraft && draftAvailability() === 'checking') {
+          <p>Checking available operations…</p>
+        } @else if (signedIn) {
+          <button type="submit" class="run" [disabled]="busy()">{{ busy() ? 'Sending…' : 'Run this step' }}</button>
+        } @else {
+          <button type="button" class="run" (click)="connect.emit()">Sign in to run this step</button>
+        }
+        @if (notice()) { <p role="alert">{{ notice() }}</p> }
+      </form>
+      <h3>What to check</h3>
+      <p>{{ exercise.expected }}</p>
+      @if (history.length) {
+        <h3>Responses for this exercise</h3>
+        @for (result of history; track result) {
+          <details [open]="$first">
+            <summary>{{ result.status ? 'HTTP ' + result.status : 'Connection error' }} · {{ result.title }}</summary>
+            <code>{{ result.path }}</code>
+            @if (result.sent) {
+              <details><summary>Request data</summary><pre>{{ result.sent | json }}</pre></details>
+            }
+            <pre>{{ result.content | json }}</pre>
+          </details>
+        }
+      }
+    </article>
+  </div>
+</section>

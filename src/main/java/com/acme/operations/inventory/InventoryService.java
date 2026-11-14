@@ -10,69 +10,70 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
 public class InventoryService {
-    // Acceso a persistencia separado de las reglas que coordina este servicio.
+    // The repository handles persistence for this service.
     private final InventoryRepository repository;
-    // Servicio de auditoría compartido para registrar las acciones de esta operación.
+    // Use the shared audit service to record this operation.
     private final AuditService audit;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public InventoryService(InventoryRepository repository, AuditService audit) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.repository = repository;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.audit = audit;
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Ajusta las existencias físicas y registra el motivo dentro de una misma operación.
+    // It adjusts physical stocks and records the motive within the same operation.
     public void adjust(long productId, InventoryDtos.Adjustment request) {
-        // Rechaza cero y cantidades fuera del rango admitido antes de tocar el inventario.
+        // Reject zero and amounts outside the range admitted before touching the inventory.
         if (request.quantity() == 0
                 || request.quantity() > 1000000000L
                 || request.quantity() < -1000000000L)
-            // El handler devolverá 400 con INVALID_QUANTITY; la cantidad enviada no es válida.
+            // The handler will return 400 with INVALID_QUANTITY; the amount sent is not valid.
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_QUANTITY",
                     "Adjustment must be nonzero and between -1000000000 and 1000000000");
-        // Comprueba que el producto exista antes de intentar crear o bloquear su saldo.
+        // Check that the product exists before creating or locking its inventory row.
         if (!repository.productExists(productId))
-            // La ausencia del producto se comunica como 404, no como stock insuficiente.
+            // The absence of the product is reported as 404, not as insufficient stock.
             throw new BusinessException(
                     HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found");
-        // Lee y bloquea la fila del producto hasta que termine esta transacción.
+        // Read and lock the product row until this transaction is finished.
         var balance = repository.lock(productId);
-        // Guardará el nuevo total físico, no la cantidad disponible ni el incremento aislado.
+        // It will keep the new physical total, not the amount available or the increase isolated.
         long onHand;
-        // Captura únicamente el desbordamiento de la suma para dar un error comprensible.
+        // Catch addition overflow and report why the quantity is invalid.
         try {
-            // Suma el ajuste al saldo actual y lanza ArithmeticException si el resultado no cabe en long.
+            // Add the adjustment to the current balance and launch ArithmeticException if the result does not fit
+            // in long.
             onHand = Math.addExact(balance.onHand(), request.quantity());
-        // Convierte ese desbordamiento en una excepción de negocio con HTTP 400.
+        // You turn that overflow into a business exception with HTTP 400.
         } catch (ArithmeticException exception) {
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST, "INVALID_QUANTITY", "Quantity exceeds supported range");
         }
-        // Impide dejar menos existencias que las comprometidas; también evita un saldo físico negativo.
+        // It prevents fewer stocks than those committed; it also prevents a negative physical balance.
         if (onHand < balance.reserved())
-            // 409 explica que el ajuste choca con las reservas actuales.
+            // 409 explains that the adjustment is in line with the current reserves.
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "INSUFFICIENT_AVAILABLE_STOCK",
                     "Adjustment would consume reserved stock or make stock negative");
-        // Guarda el nuevo total físico e incrementa la versión del saldo.
+        // Save the new physical total and increase the balance version.
         repository.updateOnHand(productId, onHand);
-        // Añade el movimiento ADJUSTMENT; orderId es null porque no procede de un pedido.
+        // Add the ADJUSTMENT movement; orderId is null because it does not come from an order.
         repository.insertMovement(
                 productId, null, "ADJUSTMENT",request.quantity(), request.reason());
-        // Registra quién ajustó el stock; saldo, movimiento y auditoría comparten transacción.
+        // Record who adjusted the stock; balance, movement and audit share transaction.
         audit.record(
                 "STOCK_ADJUSTED",
                 "PRODUCT",
@@ -80,50 +81,50 @@ public class InventoryService {
                 request.quantity() + ": " + request.reason());
     }
 
-    // Spring exige una transacción ya abierta; se une a ella y falla si no existe.
+    // Spring requires an already open transaction; it joins and fails if it does not exist.
     @Transactional(propagation = Propagation.MANDATORY)
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Reserva unidades para un pedido; las cajas todavía permanecen en el almacén.
+    // Book units for an order; the boxes are still in the warehouse.
     public void reserve(long orderId, long productId, long quantity) {
-        // Rechaza cantidades cero o negativas antes de bloquear datos.
+        // Reject zero or negative amounts before blocking data.
         requirePositiveQuantity(quantity);
-        // Bloquea el saldo del producto para que otra reserva no use los mismos disponibles.
+        // Lock the inventory row so concurrent orders cannot reserve the same units.
         var balance = repository.lock(productId);
-        // Disponible = físico menos reservado; compara ese resultado con lo solicitado.
+        // Available = less reserved physicist; compare that result to what was requested.
         if (balance.onHand() - balance.reserved() < quantity)
-            // Si no alcanza, la excepción provoca rollback de la operación que llamó a reserve.
+            // If it does not reach, the exception causes rollback from the operation that called for reserve.
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "INSUFFICIENT_STOCK",
                     "Insufficient available stock for product " + productId);
-        // Aumenta reserved y crea la reserva vinculada al pedido en la misma transacción.
+        // It increases the reserve and creates the reservation linked to the order in the same transaction.
         repository.insertReservation(orderId, productId, quantity);
-        // Guarda la evidencia de la reserva; un fallo aquí también deshace el cambio anterior.
+        // Save the evidence of the reservation; a failure here also undoes the previous change.
         repository.insertMovement(productId, orderId, "RESERVE", quantity, "Order confirmed");
     }
 
-    // Spring exige una transacción ya abierta; se une a ella y falla si no existe.
+    // Spring requires an already open transaction; it joins and fails if it does not exist.
     @Transactional(propagation = Propagation.MANDATORY)
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Libera una reserva; ship distingue una cancelación de una salida física.
+    // Free a reservation; ship distinguishes a cancellation from a physical output.
     public void release(long orderId, long productId, long quantity, boolean ship) {
-        // La cantidad debe ser positiva aunque el movimiento final se registre con signo negativo.
+        // The amount must be positive even if the final movement is recorded with a negative sign.
         requirePositiveQuantity(quantity);
-        // Mantiene protegido el saldo mientras comprueba y libera la reserva.
+        // Keep the balance protected while checking and releasing the reservation.
         var balance = repository.lock(productId);
-        // Exige saldo reservado suficiente y borrar exactamente la reserva de este pedido y cantidad.
+        // Check the reserved stock and remove the reservation matching this order and quantity.
         if (balance.reserved() < quantity
                 || repository.deleteReservation(orderId, productId, quantity) != 1)
-            // Si la reserva no coincide, se aborta la transacción en vez de dejar un cambio parcial.
+            // If the reservation does not match, the transaction is aborted instead of leaving a partial change.
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "RESERVATION_MISMATCH",
                     "Reservation does not match order");
-        // Siempre resta reserved; solo resta on_hand cuando ship es true y las unidades salen.
+        // Always subtract reserved; only subtract on_hand when ship is true and the units come out.
         repository.decreaseReservedAndOnHand(productId, quantity, ship ? quantity : 0);
-        // Registra SHIP al enviar o RELEASE al cancelar; -quantity refleja la liberación.
+        // You register SHIP when you send or RELEASE when you cancel; -quantity reflects the release.
         repository.insertMovement(
                 productId,
                 orderId,
@@ -132,9 +133,9 @@ public class InventoryService {
                 ship ? "Order completed" : "Order cancelled");
     }
 
-    // Centraliza la misma regla para reservar y liberar.
+    // Centralize the same rule to book and release.
     private static void requirePositiveQuantity(long quantity) {
-        // Cero o un número negativo no representan una cantidad válida para estas operaciones.
+        // Zero or a negative number does not represent a valid amount for these operations.
         if (quantity <= 0)
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
@@ -142,21 +143,21 @@ public class InventoryService {
                     "Stock reservation quantity must be positive");
     }
 
-    // Consulta el resumen por producto: físico, reservado y disponible.
+    // See the summary by product: physical, reserved and available.
     public PageResponse<InventoryDtos.Balance> balances(Long productId, int page, int size) {
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.balances(productId, page, size);
     }
 
-    // Consulta el historial de cambios, no el saldo actual.
+    // Check the change history, not the current balance.
     public PageResponse<InventoryDtos.Movement> movements(Long productId, int page, int size) {
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.movements(productId, page, size);
     }
 
-    // Consulta las reservas asociadas a pedidos, no realiza una reserva nueva.
+    // Check the reservations associated with orders, do not make a new reservation.
     public PageResponse<InventoryDtos.Reservation> reservations(int page, int size) {
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.reservations(page, size);
     }
 }

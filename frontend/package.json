@@ -2,12 +2,13 @@
   "name": "frontend",
   "version": "0.0.0",
   "scripts": {
+    "lab": "ng serve --proxy-config proxy.lab.json",
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
     "build:backend": "npm run build && node scripts/copy-to-backend.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "node scripts/test-warehouse.mjs && node scripts/check-endpoint-coverage.mjs"
   },
   "prettier": {
     "printWidth": 100,

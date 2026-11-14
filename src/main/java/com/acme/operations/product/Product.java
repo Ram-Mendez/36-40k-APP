@@ -4,100 +4,100 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 
-// JPA trata esta clase como una entidad persistente y reconstruye objetos desde sus filas.
+// JPA maps rows from the database to instances of this entity.
 @Entity
-// Indica la tabla que mapea JPA; su estructura se mantiene mediante las migraciones.
+// Map the entity to the table managed by database migrations.
 @Table(name = "product")
-// Entidad del catálogo: JPA vincula sus campos con una fila de product.
+// Catalogue entity: JPA links its fields to a product row.
 public class Product {
-    // Marca la clave primaria que JPA utiliza para identificar esta entidad.
+    // Identify the primary key used by JPA.
     @Id
-    // La base genera el id al insertar; JPA recoge el valor, no lo envía el cliente.
+    // The database generates the ID on insert. JPA reads the generated value.
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    // Identificador del producto generado al insertar; todavía puede ser null antes del alta.
+    // The database assigns the product ID on insert. It can be null before the product is saved.
     private Long id;
 
-    // Describe el mapeo y límites de la columna; no sustituye la validación del DTO ni las restricciones SQL.
+    // Map this field to a database column. The DTO and the database also validate input.
     @Column(nullable = false, length = 64)
-    // Código de catálogo que identifica el producto de forma única según la restricción de la tabla.
+    // Product SKU.
     private String sku;
 
-    // Describe el mapeo y límites de la columna; no sustituye la validación del DTO ni las restricciones SQL.
+    // Map this field to a database column. The DTO and the database also validate input.
     @Column(nullable = false, length = 200)
-    // Nombre descriptivo que se muestra al consultar el producto.
+    // Descriptive name shown when looking at the product.
     private String name;
 
-    // Describe el mapeo y límites de la columna; no sustituye la validación del DTO ni las restricciones SQL.
+    // Map this field to a database column. The DTO and the database also validate input.
     @Column(nullable = false, precision = 14, scale = 2)
-    // Precio monetario con dos decimales; BigDecimal evita errores de coma flotante.
+    // Monetary price with two decimals; BigDecimal avoids floating coma errors.
     private BigDecimal unitPrice;
 
-    // Describe el mapeo y límites de la columna; no sustituye la validación del DTO ni las restricciones SQL.
+    // Map this field to a database column. The DTO and the database also validate input.
     @Column(nullable = false)
-    // Un producto nuevo empieza activo; desactivarlo no lo elimina.
+    // A new product starts active; disable it does not eliminate it.
     private boolean active = true;
 
-    // JPA comprueba e incrementa esta versión al actualizar para detectar escrituras concurrentes.
+    // JPA checks and increments the version on update to detect concurrent changes.
     @Version private long version;
 
-    // JPA necesita este constructor sin parámetros para reconstruir entidades desde la base.
+    // JPA needs this non-parameter builder to rebuild entities from the base.
     protected Product() {}
 
-    // Construye el producto con la entrada validada; no lo guarda por sí solo.
+    // Build the product with the validated input; it does not keep it on its own.
     public Product(ProductDtos.Input input) {
-        // Reutiliza las mismas reglas de normalización que una actualización.
+        // It reuses the same standards of normalization as an update.
         update(input);
     }
 
-    // Aplica los datos editables; no permite cambiar id, active ni version desde el DTO.
+    // It applies the editable data; it does not allow to change id, active or version from the DTO.
     public void update(ProductDtos.Input input) {
-        // Normaliza SKU quitando espacios exteriores y usando mayúsculas independientes del idioma.
+        // It normalizes SKU by removing outer spaces and using language-independent capital letters.
         this.sku = input.sku().strip().toUpperCase(java.util.Locale.ROOT);
-        // Quita espacios exteriores al nombre, conservando su contenido.
+        // Remove outer spaces from the name, keeping its content.
         this.name = input.name().strip();
-        // Fija dos decimales; no aplica un redondeo silencioso si el valor no cabe exactamente.
+        // Set two decimals; do not apply a silent rounding if the value does not exactly fit.
         this.unitPrice = input.unitPrice().setScale(2);
     }
 
-    // Marca una baja lógica para conservar referencias de pedidos y movimientos.
+    // Deactivate the record to keep references from orders and stock movements valid.
     public void deactivate() {
-        // JPA persistirá este cambio al sincronizar la entidad gestionada en una transacción.
+        // JPA will continue this change by synchronizing the entity managed in a transaction.
         active = false;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public Long getId() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return id;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public String getSku() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return sku;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public String getName() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return name;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public BigDecimal getUnitPrice() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return unitPrice;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public boolean isActive() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return active;
     }
 
-    // Expone el valor de la entidad en memoria; este getter no modifica ni guarda datos.
+    // Return the current field value from the entity in memory.
     public long getVersion() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return version;
     }
 }

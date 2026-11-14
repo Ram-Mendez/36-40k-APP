@@ -1,39 +1,41 @@
 package com.acme.operations.report;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.math.BigDecimal;
 
-// Agrupa DTO de entrada y salida; los records transportan datos y no consultan la base automáticamente.
+// These request and response records carry data between the API and the service.
 public final class ReportDtos {
-    // Constructor privado: esta clase agrupa tipos o utilidades y no necesita instancias.
+    // This class groups related types or utilities and does not need an instance.
     private ReportDtos() {}
 
-    // Una fila de ventas agrega pedidos completados de un mismo cliente.
+    // A sales row adds completed orders from the same customer.
     public record CustomerSales(
-            // Referencia al cliente al que pertenece el pedido.
-            long customerId,
-            // Nombre del cliente obtenido al consultar su relación con el pedido.
+            // Reference to the customer to whom the order belongs.
+            @Schema(description = "ID of the customer placing the order.") long customerId,
+            // Name of the client obtained when consulting your relationship to the order.
             String customerName,
-            // Número de pedidos completados incluidos por el filtro de fechas.
+            // Number of orders completed included by the date filter.
             long completedOrders,
-            // Suma de importes de pedidos; el coste de envío se mantiene separado.
+            // Amount of orders; shipping costs are kept separate.
             BigDecimal netSales,
-            // Coste cotizado del envío, separado del total de productos.
+            // Quota cost of shipping, separated from total products.
             BigDecimal shippingCost) {}
 
-    // Una fila por producto activo cuyo disponible cumple el umbral de stock bajo.
+    // A row per active product, the available of which meets the low stock threshold.
     public record LowStock(
-            // Referencia al producto del catálogo, no al id del pedido.
-            long productId,
-            // Código de catálogo del producto.
+            // ID of the catalog product.
+            @Schema(description = "ID of the catalog product.") long productId,
+            // Product SKU.
             String sku,
-            // Nombre descriptivo del producto.
+            // Product name.
             String productName,
-            // Físico registrado y parte de ese físico comprometida en reservas.
-            long onHand,
-            // Unidades físicas comprometidas con pedidos.
-            long reserved,
-            // Disponible para nuevas reservas: físico menos reservado.
-            long available,
-            // Conteo de registros de reserva del producto, no cantidad de unidades.
-            long confirmedOrders) {}
+            // Registered physicist and part of that physicist engaged in reserves.
+            @Schema(description = "Units physically in stock.") long onHand,
+            // Physical units committed to orders.
+            @Schema(description = "Units held for confirmed customer orders.") long reserved,
+            // Available for new reservations: less reserved physicist.
+            @Schema(description = "On-hand units minus reserved units.") long available,
+            // Product reservation records count, not number of units.
+            @Schema(description = "Number of confirmed orders reserving this product.") long confirmedOrders) {}
 }

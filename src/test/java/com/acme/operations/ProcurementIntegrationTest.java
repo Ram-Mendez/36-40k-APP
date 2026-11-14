@@ -72,6 +72,78 @@ class ProcurementIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void cancellingPartiallyReceivedPurchasePreservesItsReceiptsAndStock() throws Exception {
+        long supplierId = supplier(2);
+        long productId = product();
+        long purchaseId = purchase(supplierId);
+        String path = "/api/v1/purchase-orders/{id}";
+        line(purchaseId, productId, 10, "8.00");
+        call(post(path + "/submit", purchaseId), null, 200);
+        var delivery = call(post(path + "/receipts", purchaseId), receipt(UUID.randomUUID(), productId, 3), 200);
+        var order = call(get(path, purchaseId), null, 200);
+        assertThat(order.path("status").asText()).isEqualTo("PARTIALLY_RECEIVED");
+        assertThat(order.at("/lines/0/receivedQuantity").asLong()).isEqualTo(3);
+        assertThat(order.at("/lines/0/outstandingQuantity").asLong()).isEqualTo(7);
+        var movements = get("/api/v1/inventory/movements").param("productId", Long.toString(productId));
+        var history = call(movements, null, 200);
+        assertThat(history.path("totalElements").asInt()).isEqualTo(1);
+        assertThat(history.at("/content/0/quantity").asLong()).isEqualTo(3);
+        assertThat(stock(productId, "on_hand")).isEqualTo(3);
+
+        var rejection = call(post(path + "/cancel", purchaseId), null, 409);
+        assertThat(rejection.path("code").asText()).isEqualTo("INVALID_PURCHASE_STATE");
+        assertThat(call(get(path, purchaseId), null, 200)).isEqualTo(order);
+        assertThat(call(get(path + "/receipts", purchaseId), null, 200).path("totalElements").asInt()).isEqualTo(1);
+        assertThat(call(get(path + "/receipts/{delivery}", purchaseId, delivery.path("id").asLong()), null, 200))
+                .isEqualTo(delivery);
+        assertThat(call(get("/api/v1/inventory/movements").param("productId", Long.toString(productId)), null, 200))
+                .isEqualTo(history);
+        assertThat(stock(productId, "on_hand")).isEqualTo(3);
+        assertThat(call(post(path + "/cancel", purchase(supplierId)), null, 200).path("status").asText())
+                .isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void warehouseCanReceiveAnOrderAndReadOnlyUsersCanInspectIt() throws Exception {
+        long supplierId = supplier(2);
+        long productId = product();
+        String purchaseOrders = "/api/v1/purchase-orders";
+        var invalid = call(post(purchaseOrders).header("Accept-Language", "en"), Map.of(), 400);
+        assertThat(invalid.at("/violations/0").asText()).contains("supplierId").contains("must");
+        long purchaseId = call(post(purchaseOrders), Map.of("supplierId", supplierId), 201).required("id").asLong();
+        call(put(purchaseOrders + "/{id}/lines/{productId}", purchaseId, productId),
+                Map.of("quantity", 10, "unitCost", new BigDecimal("8.00")), 200);
+        call(post(purchaseOrders + "/{id}/submit", purchaseId), null, 200);
+
+        var input = Map.of("requestId", UUID.randomUUID(), "deliveryReference", "DELIVERY-1",
+                "lines", List.of(Map.of("productId", productId, "quantity", 3)));
+        var delivery = call(post(purchaseOrders + "/{id}/receipts", purchaseId), input, 200);
+        assertThat(delivery.required("deliveryReference").asText()).isEqualTo("DELIVERY-1");
+        var movement = call(get("/api/v1/inventory/movements")
+                .param("productId", Long.toString(productId)), null, 200).at("/content/0");
+        assertThat(movement.required("kind").asText()).isEqualTo("RECEIPT");
+        assertThat(movement.required("reason").asText()).isEqualTo("Purchase order " + purchaseId + ", receipt " + delivery.required("id"));
+        var order = call(get(purchaseOrders + "/{id}", purchaseId), null, 200);
+        assertThat(order.required("status").asText()).isEqualTo("PARTIALLY_RECEIVED");
+        assertThat(order.at("/lines/0/outstandingQuantity").asLong()).isEqualTo(7);
+        assertThat(call(get("/api/v1/purchase-orders/{id}", purchaseId), null, 200)
+                .at("/lines/0/receivedQuantity").asLong()).isEqualTo(3);
+        var rejection = call(post(purchaseOrders + "/{id}/cancel", purchaseId), null, 409);
+        assertThat(rejection.required("code").asText()).isEqualTo("INVALID_PURCHASE_STATE");
+        assertThat(rejection.required("detail").asText()).contains("purchase order state");
+
+        var credentials = mvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsBytes(Map.of("username", "readonly", "password", "DevPassword123!"))))
+                .andReturn().getResponse();
+        assertThat(credentials.getStatus()).isEqualTo(200);
+        bearer = "Bearer " + json(credentials.getContentAsString()).required("accessToken").asText();
+        call(get(purchaseOrders + "/{id}", purchaseId), null, 200);
+        call(post(purchaseOrders + "/{id}/receipts", purchaseId), input, 403);
+        assertThat(mvc.perform(get(purchaseOrders)).andReturn().getResponse().getStatus()).isEqualTo(401);
+    }
+
+    @Test
     void partialAndFinalReceiptsIncreaseOnlyPhysicalStockAndReplayTheOriginalReceipt() throws Exception {
         long first = product();
         long second = product();
@@ -366,6 +438,7 @@ class ProcurementIntegrationTest extends AbstractIntegrationTest {
         var response = mvc.perform(request).andReturn().getResponse();
         assertThat(response.getStatus()).withFailMessage("HTTP %s: %s", response.getStatus(), response.getContentAsString())
                 .isEqualTo(expectedStatus);
-        return response.getContentAsString().isBlank() ? mapper.nullNode() : json(response.getContentAsString());
+        byte[] content = response.getContentAsByteArray();
+        return content.length == 0 ? mapper.nullNode() : mapper.readTree(content);
     }
 }

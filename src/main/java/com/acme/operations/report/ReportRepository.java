@@ -10,45 +10,45 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-// Spring registra el acceso a datos; aquí escribimos el SQL y mapeamos sus resultados.
+// Spring registers this repository. Its methods execute SQL and map the results.
 @Repository
 public class ReportRepository {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public ReportRepository(JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // Agrega ventas por cliente; no lista cada pedido individualmente.
+    // Aggregate sales for each customer.
     public PageResponse<ReportDtos.CustomerSales> sales(
             Instant from, Instant to, int page, int size) {
-        // Selecciona los estados que se tienen en cuenta para la consulta de ventas.
+        // Select the states that are taken into account for the sales query.
         StringBuilder filter = new StringBuilder(" WHERE o.status IN ('COMPLETED')");
-        // Los parámetros se acumulan en el orden de los ? del filtro.
+        // The parameters are accumulated in the order of the filter?.
         List<Object> args = new ArrayList<>();
-        // El límite inicial se incluye mediante >= y se convierte a timestamp SQL.
+        // The initial limit is included by the "h= and is converted to timestamp SQL."
         if (from != null) {
             filter.append(" AND o.updated_at>=?");
             args.add(Timestamp.from(from));
         }
-        // El límite final se excluye mediante <, evitando contar dos veces fechas contiguas.
+        // The final limit is excluded by means of the following, avoiding counting two adjoining dates.
         if (to != null) {
             filter.append(" AND o.updated_at<?");
             args.add(Timestamp.from(to));
         }
-        // Cuenta clientes distintos, ya que cada fila del informe representa un cliente.
+        // It counts different customers, as each row of the report represents a customer.
         long total =
                 jdbc.queryForObject(
                         "SELECT count(DISTINCT o.customer_id) FROM sales_order o" + filter,
                         Long.class,
                         args.toArray());
-        // Añade tamaño y desplazamiento después de los posibles parámetros de fecha.
+        // Add size and displacement after possible date parameters.
         args.add(size);
         args.add((long) page * size);
-        // Agrupa por cliente y suma ventas y costes de envío; ordena por ventas e id.
+        // Group by customer, sum sales and shipping totals, then sort by sales and ID.
         var rows =
                 jdbc.query(
                         "SELECT"
@@ -57,7 +57,7 @@ public class ReportRepository {
                                 + filter
                                 + " GROUP BY c.id,c.name ORDER BY sum(o.total) DESC,c.id LIMIT ?"
                                 + " OFFSET ?",
-                        // Convierte los agregados SQL en un DTO de ventas por cliente.
+                        // Convert SQL aggregates into a sales DTO per customer.
                         (rs, n) ->
                                 new ReportDtos.CustomerSales(
                                         rs.getLong(1),
@@ -66,28 +66,28 @@ public class ReportRepository {
                                         rs.getBigDecimal(4),
                                         rs.getBigDecimal(5)),
                         args.toArray());
-        // Devuelve los agregados y los totales de página.
+        // Returns the aggregates and the page totals.
         return new PageResponse<>(rows, page, size, total, (int) ((total + size - 1) / size));
     }
 
-    // Busca productos activos con pocas unidades disponibles para nuevas reservas.
+    // Search for active products with few units available for new reservations.
     public PageResponse<ReportDtos.LowStock> lowStock(long threshold, int page, int size) {
-        // LEFT JOIN incluye productos sin saldo; COALESCE los trata como cero.
+        // LEFT JOIN includes products without an inventory row. COALESCE gives those products a zero balance.
         String from =
                 " FROM product p LEFT JOIN inventory_balance i ON i.product_id=p.id WHERE"
                     + " p.active=true AND coalesce(i.on_hand,0)-coalesce(i.reserved,0)<=?";
-        // El mismo filtro cuenta productos disponibles por debajo o igual al umbral.
+        // The same filter counts products available below or equal to the threshold.
         long total = jdbc.queryForObject("SELECT count(*)" + from, Long.class, threshold);
-        // Lee el saldo y cuenta cuántas reservas tiene cada producto.
+        // Read each product’s balance and count its reservations.
         var rows =
                 jdbc.query(
                         "SELECT"
                             + " p.id,p.sku,p.name,coalesce(i.on_hand,0),coalesce(i.reserved,0),(SELECT"
-                            + " count(*) FROM stock_reservation r)"
+                            + " count(DISTINCT r.order_id) FROM stock_reservation r WHERE r.product_id=p.id)"
                                 + from
                                 + " ORDER BY coalesce(i.on_hand,0)-coalesce(i.reserved,0),p.id"
                                 + " LIMIT ? OFFSET ?",
-                        // Construye el DTO incluyendo disponible = on_hand - reserved.
+                        // Build the DTO including available = on_hand - reserved.
                         (rs, n) ->
                                 new ReportDtos.LowStock(
                                         rs.getLong(1),
@@ -96,13 +96,13 @@ public class ReportRepository {
                                         rs.getLong(4),
                                         rs.getLong(5),
                                         rs.getLong(4) - rs.getLong(5),
-                                        // Este conteo procede de stock_reservation; no es una suma de unidades.
+                                        // This count comes from stock_reservation; it is not a sum of units.
                                         rs.getLong(6)),
-                        // Los ? reciben threshold, size y page*size, en ese orden.
+                        // They receive threshold, size and page * size, in that order.
                         threshold,
                         size,
                         (long) page * size);
-        // Entrega la página sin cambiar ningún saldo.
+        // Deliver the page without changing any balance.
         return new PageResponse<>(rows, page, size, total, (int) ((total + size - 1) / size));
     }
 }

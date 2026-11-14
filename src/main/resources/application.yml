@@ -16,13 +16,16 @@ spring:
       hibernate.jdbc.time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  web:
+    locale: en
+    locale-resolver: fixed
   mvc:
     problemdetails:
       enabled: true
   jackson:
     deserialization:
       fail-on-unknown-properties: true
-# Distingue DTO con el mismo nombre simple al generar los esquemas OpenAPI.
+# Use fully qualified names for DTOs that share a simple class name.
 springdoc:
   use-fqn: true
 server:

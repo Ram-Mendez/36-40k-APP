@@ -6,38 +6,38 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
 public class AuditService {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public AuditService(JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Registra una acción usando la identidad de la petición actual.
+    // It records an action using the identity of the current request.
     public void record(String action, String entityType, String entityId, String details) {
-        // Consulta el contexto de Spring Security; no recibe el nombre del usuario desde el cliente.
+        // See the context of Spring Security; it does not receive the user's name from the customer.
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        // Si no hay autenticación usa system, por ejemplo en un proceso de arranque.
+        // If there is no authentication use system, for example in a boot process.
         String actor = authentication == null ? "system" : authentication.getName();
-        // Llamada interna: usa la transacción ya abierta de record, sin volver a pasar por el proxy.
+        // Internal call: use the already open record transaction, without going through the proxy again.
         recordAs(actor, action, entityType, entityId, details);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Permite indicar el actor explícitamente, como en login antes de autenticar la petición.
+    // It allows to indicate the actor explicitly, as in login before authenticating the request.
     public void recordAs(
             String actor, String action, String entityType, String entityId, String details) {
-        // Inserta acción, recurso, detalle y requestId en la misma transacción del llamador.
+        // Save the action, resource, details and requestId in the same transaction as the caller.
         jdbc.update(
                 "INSERT INTO audit_event(actor,action,entity_type,entity_id,details,request_id)"
                     + " VALUES (?,?,?,?,?,?)",
@@ -46,7 +46,7 @@ public class AuditService {
                 entityType,
                 entityId,
                 details,
-                // El MDC aporta la correlación con logs; puede ser null fuera de una petición HTTP.
+                // The MDC provides the correlation with logs; it can be null out of an HTTP request.
                 MDC.get("requestId"));
     }
 }

@@ -1,0 +1,23 @@
+.guide { max-width: 80rem; margin: 0 auto; color: var(--text, #172c30); }
+h1 { margin: 0 0 1rem; font-size: clamp(1.65rem, 3vw, 2.5rem); }
+h2 { margin: 0 0 .5rem; font-size: 1.35rem; }
+h3 { margin: 1.5rem 0 .5rem; }
+p { line-height: 1.55; max-width: 72ch; }
+label { display: grid; gap: .35rem; font-weight: 600; }
+select, input { padding: .65rem; border: 1px solid #98aca8; border-radius: .4rem; color: #193c34; background: white; font: inherit; width: 100%; min-width: 0; }
+select { max-width: 42rem; }
+.steps { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr); gap: 1.25rem; align-items: start; }
+nav, article { background: white; border: 1px solid #d6e3de; border-radius: .7rem; padding: 1rem; }
+nav { display: grid; gap: .2rem; padding: .45rem; }
+button { cursor: pointer; font: inherit; }
+nav button { border: 0; padding: .6rem .7rem; text-align: left; color: #365548; background: transparent; border-radius: .35rem; }
+nav button[aria-current], nav button:hover { background: var(--lime); color: var(--forest); }
+form { display: grid; gap: .8rem; margin: 1.1rem 0; }
+.run, .secondary { justify-self: start; padding: .6rem 1rem; border-radius: .4rem; border: 1px solid var(--green); }
+.run { background: var(--forest); color: white; }
+.secondary { background: white; color: var(--forest); }
+button:disabled { opacity: .65; cursor: wait; }
+code, pre { font-size: .86rem; overflow-wrap: anywhere; }
+summary { padding: .6rem 0; cursor: pointer; font-weight: 600; }
+pre { white-space: pre-wrap; background: #eef4f0; padding: .6rem; max-height: 23rem; overflow: auto; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; } nav { max-height: 13rem; overflow: auto; } }

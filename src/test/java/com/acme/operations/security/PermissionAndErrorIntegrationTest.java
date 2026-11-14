@@ -12,11 +12,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.List;
 
-// Comprueba permisos y respuestas HTTP con la aplicación y PostgreSQL de integración.
+// Check HTTP permissions and responses with the integration application and PostgreSQL.
 class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
     @Test
     void readonlyCanOpenAnOrderFromTheList() throws Exception {
-        // Como en Swagger: iniciar sesión y listar los pedidos con el token de solo lectura.
+        // As in Swagger: log in and list the orders with the read-only token.
         String readonly = "Bearer " + token("readonly");
         var list = mvc.perform(get("/api/v1/orders").param("size", "1").header("Authorization", readonly))
                 .andExpect(status().isOk())
@@ -24,47 +24,47 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                 .andReturn().getResponse();
         long orderId = json(list.getContentAsString()).get("content").get(0).get("id").asLong();
 
-        // Abrir ese pedido con el mismo token. El bug devolvía 403 en este GET.
+        // Open that order with the same token. The bug returned 403 in this GET.
         mvc.perform(get("/api/v1/orders/{id}", orderId).header("Authorization", readonly))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(orderId));
 
-        // Sin token, la misma petición debe seguir requiriendo autenticación.
+        // Without token, the same request must continue to require authentication.
         mvc.perform(get("/api/v1/orders/{id}", orderId))
                 .andExpect(status().isUnauthorized());
     }
 
-    // Un método HTTP no soportado debe producir 405, no un error interno.
+    // An unsupported HTTP method must produce 405, not an internal error.
     @Test
     void unsupportedMethodReturns405InsteadOfServerError() throws Exception {
-        // PUT en la ruta de colección de clientes no está definido; se llama con un admin válido.
+        // PUT on the customer collection route is not defined; it is called with a valid admin.
         mvc.perform(put("/api/v1/customers").header("Authorization", "Bearer " + token("admin")))
-                // Comprueba estado, código de error y presencia de requestId.
+                // Check the HTTP status, error code and requestId.
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
     }
 
-    // Un Content-Type no admitido debe devolver 415.
+    // An unadmitted Content-Type must return 415.
     @Test
     void unsupportedContentTypeReturns415InsteadOfServerError() throws Exception {
-        // Envía texto plano a una ruta que espera JSON.
+        // Send flat text to a JSON-waiting route.
         mvc.perform(
                         post("/api/v1/customers")
                                 .header("Authorization", "Bearer " + token("admin"))
                                 .contentType(MediaType.TEXT_PLAIN)
                                 .content("customer"))
-                // Verifica tanto el estado como el código UNSUPPORTED_MEDIA_TYPE.
+                // Verifies both the state and the UNSUPPORTED_MEDIA_TYPE code.
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
     }
 
-    // JSON incompleto y parámetros numéricos inválidos deben devolver 400 consistente.
+    // JSON incomplete and invalid numerical parameters must return 400 consistent.
     @Test
     void malformedJsonAndNumericParametersReturnConsistent400() throws Exception {
-        // Reutiliza el token de admin para distinguir validación de errores de autenticación.
+        // Reuse admin token to distinguish validation from authentication errors.
         String authorization = "Bearer " + token("admin");
-        // Envía un cuerpo JSON incompleto al endpoint de usuarios.
+        // Send an incomplete JSON body to the endpoint of users.
         mvc.perform(
                         post("/api/v1/users")
                                 .header("Authorization", authorization)
@@ -72,7 +72,7 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                                 .content("{\"username\":"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
-        // Envía texto donde page debe ser numérico y comprueba el mismo código de entrada inválida.
+        // Send text where page should be numerical and check the same invalid input code.
         mvc.perform(
                         get("/api/v1/users")
                                 .param("page", "not-a-number")
@@ -81,17 +81,17 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
-    // READONLY no puede modificar recursos ni consultar auditoría, y no debe alterar la base.
+    // READONLY cannot change resources or consult audit, and should not alter the basis.
     @Test
     void readonlyCannotMutateAnyBusinessResourceOrReadAuditAndDatabaseIsUnchanged()
             throws Exception {
-        // Prepara credenciales de solo lectura y selecciona un cliente y producto existentes.
+        // Prepare reading-only credentials and select an existing customer and product.
         String authorization = "Bearer " + token("readonly");
         Long customerId = jdbc.queryForObject("SELECT min(id) FROM customer", Long.class);
         Long productId = jdbc.queryForObject("SELECT min(id) FROM product", Long.class);
-        // Guarda una foto de las tablas para compararla después de todos los intentos.
+        // Save a picture of the tables to compare it after all the attempts.
         var before = businessSnapshot();
-        // Construye cuerpos de ejemplo para los intentos de crear o editar recursos.
+        // It builds example bodies for attempts to create or edit resources.
         String customer =
                 "{\"name\":\"Denied"
                     + " Customer\",\"taxId\":\"DENIED123\",\"email\":\"test@example.com\",\"address\":\"Madrid\",\"version\":0}";
@@ -100,7 +100,7 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                     + " Product\",\"unitPrice\":12.50,\"version\":0}";
         String user =
                 "{\"username\":\"denieduser\",\"password\":\"DeniedPassword123!\",\"role\":\"ADMIN\"}";
-        // Reúne las operaciones que deben denegarse a READONLY.
+        // Gather the operations to be refused to READONLY.
         List<MockHttpServletRequestBuilder> requests =
                 List.of(
                         post("/api/v1/customers").content(customer),
@@ -122,7 +122,7 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                         put("/api/v1/users/1").content("{\"role\":\"READONLY\",\"active\":false}"),
                         delete("/api/v1/users/1"),
                         get("/api/v1/audit"));
-        // Ejecuta cada petición y exige 403 ACCESS_DENIED.
+        // It runs each request and requires 403 ACCESS_DENIED.
         for (var request : requests) {
             mvc.perform(
                             request.header("Authorization", authorization)
@@ -130,21 +130,21 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
         }
-        // Compara el estado posterior con la foto inicial para detectar escrituras inesperadas.
+        // Compare the posterior status with the initial photo to detect unexpected scriptures.
         assertThat(businessSnapshot()).isEqualTo(before);
     }
 
-    // Comprueba que la lista de usuarios combine filtros y entregue metadatos de página.
+    // Check that the user list combines filters and delivers page metadata.
     @Test
     void usersUseSharedPaginationContractAndCombineFilters() throws Exception {
-        // Busca el usuario readonly activo con una página de tamaño uno.
+        // Find the user readonly active with a page of size one.
         mvc.perform(
                         get("/api/v1/users")
                                 .header("Authorization", "Bearer " + token("admin"))
                                 .param("query", "readonly")
                                 .param("active", "true")
                                 .param("size", "1"))
-                // Verifica el usuario devuelto, total de resultados, total de páginas y tamaño.
+                // Check the returned user, total results, total pages and size.
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].username").value("readonly"))
                 .andExpect(jsonPath("$.totalElements").value(1))
@@ -153,7 +153,7 @@ class PermissionAndErrorIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.size").value(1));
     }
 
-    // Obtiene filas de tablas de negocio en orden estable para poder comparar antes y después.
+    // It gets rows of business tables in stable order to be able to compare before and after.
     private List<?> businessSnapshot() {
         return List.of(
                 jdbc.queryForList("SELECT * FROM customer ORDER BY id"),

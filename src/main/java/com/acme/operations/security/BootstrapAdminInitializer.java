@@ -14,81 +14,80 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
-// Spring crea y gestiona este componente para poder inyectarlo donde se necesita.
+// Spring manages this component and injects it wherever needed.
 @Component
-// Spring solo crea este componente si security.bootstrap.enabled está habilitado.
+// Spring only creates this component if security.bootstrap.enabled is enabled.
 @ConditionalOnProperty(prefix = "security.bootstrap", name = "enabled", havingValue = "true")
-// ApplicationRunner hace que Spring ejecute run durante el arranque.
+// AppliationRunner causes Spring to run run during the start.
 public class BootstrapAdminInitializer implements ApplicationRunner {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
-    // Codificador de contraseñas inyectado por Spring para no guardar contraseñas en claro.
+    // Password encoding injected by Spring to avoid saving clear passwords.
     private final PasswordEncoder encoder;
-    // Servicio de auditoría compartido para registrar las acciones de esta operación.
+    // Use the shared audit service to record this operation.
     private final AuditService audit;
-    // Nombre inicial obtenido de configuración, no de una petición HTTP.
+    // Initial name obtained from configuration, not from an HTTP request.
     private final String username;
-    // Secreto inicial recibido de configuración; al persistirlo se codifica con BCrypt.
+    // Initial secret received from configuration; when it persists it is coded with BCrypt.
     private final String password;
-    // Spring pasa JDBC, el codificador, auditoría y las credenciales externas al crear el componente.
+    // Spring passes JDBC, the encoder, audit and external credentials when creating the component.
     public BootstrapAdminInitializer(
             JdbcTemplate jdbc,
             PasswordEncoder encoder,
             AuditService audit,
-            // Spring resuelve las propiedades y, como alternativa, las variables de entorno.
+            // Spring solves properties and, as an alternative, environment variables.
             @Value("${security.bootstrap.username:${BOOTSTRAP_ADMIN_USERNAME:}}") String username,
             @Value("${security.bootstrap.password:${BOOTSTRAP_ADMIN_PASSWORD:}}") String password) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.encoder = encoder;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.audit = audit;
-        // Conserva las credenciales de configuración para el aprovisionamiento inicial.
+        // It retains the configuration credentials for the initial supply.
         this.username = username;
-        // Conserva el secreto recibido; se codificará antes de guardarlo en PostgreSQL.
+        // Keep the secret received; it will be encoded before saving it in PostgreSQL.
         this.password = password;
     }
-    // El compilador comprueba que este método implementa o sobrescribe el contrato heredado.
+    // The compiler checks that this method overrides the inherited declaration.
     @Override
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Ejecuta el alta inicial en transacción; no es un endpoint.
+    // Create the initial account inside a transaction at startup.
     public void run(ApplicationArguments arguments) {
-        // Evita que dos instancias de la aplicación creen el administrador al mismo tiempo.
+        // It prevents two application instances from creating the administrator at the same time.
         jdbc.execute("SELECT pg_advisory_xact_lock(74100)");
-        // Comprueba si ya existe alguna cuenta antes de crear el administrador.
+        // Check if there is any account before creating the administrator.
         Long count = jdbc.queryForObject("SELECT count(*) FROM app_user", Long.class);
-        // El proceso solo aprovisiona la primera cuenta; nunca cambia usuarios existentes.
+        // The process only provides the first account; it never changes existing users.
         if (count != null && count > 0) return;
-        // Valida el formato del nombre para evitar una cuenta inicial inválida.
+        // Valid the name format to avoid an invalid initial account.
         if (!username.matches("[a-zA-Z0-9._-]{3,80}"))
-            // Si falta configuración válida, el arranque falla con un mensaje explicativo.
+            // If valid configuration is missing, the boot fails with an explanatory message.
             throw new IllegalStateException(
                     "Set a valid BOOTSTRAP_ADMIN_USERNAME for initial provisioning");
-        // Exige longitud mínima, máximo de bytes BCrypt y que no sea la contraseña de desarrollo.
+        // It requires minimum length, maximum BCrypt bytes and not the development password.
         if (password.length() < 12
-                // BCrypt admite como máximo 72 bytes; UTF-8 puede usar varios bytes por carácter.
+                // BCrypt supports at most 72 bytes; UTF-8 can use several bytes per character.
                 || password.getBytes(StandardCharsets.UTF_8).length > 72
                 || "DevPassword123!".equals(password)) {
-            // Abortar aquí impide guardar un administrador con credenciales no admitidas.
+            // Abortion here prevents the storage of an administrator with unadmitted credentials.
             throw new IllegalStateException(
                     "BOOTSTRAP_ADMIN_PASSWORD must contain at least 12 characters, at most 72 UTF-8"
                         + " bytes, and differ from development credentials");
         }
-        // Inserta la cuenta ADMIN y obtiene su id generado para la auditoría.
+        // Insert the ADMIN account and get your id generated for the audit.
         Long id =
                 jdbc.queryForObject(
                         "INSERT INTO app_user(username,password_hash,role) VALUES (?,?,'ADMIN')"
                             + " RETURNING id",
                         Long.class,
-                        // Guarda el usuario en minúsculas para mantener nombres normalizados.
+                        // Save the user in small cases to maintain standard names.
                         username.toLowerCase(Locale.ROOT),
-                        // La base de datos recibe el hash de la contraseña, no la contraseña original.
+                        // The database receives the hash of the password, not the original password.
                         encoder.encode(password));
-        // Deja trazabilidad del alta junto con el identificador de la cuenta creada.
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Record the new account ID in the audit log in the same transaction as account creation.
         audit.record(
                 "ADMIN_BOOTSTRAPPED",
                 "USER",

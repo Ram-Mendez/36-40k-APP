@@ -32,57 +32,57 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.crypto.spec.SecretKeySpec;
-// Spring procesa esta configuración para registrar los objetos definidos con @Bean.
+// Spring uses this configuration to register the beans defined here.
 @Configuration
-// Activa las comprobaciones de @PreAuthorize al entrar por los proxies de Spring.
+// It activates the @PreAuthorize checks when you enter through Spring's proxies.
 @EnableMethodSecurity
 public class SecurityConfiguration {
-    // Spring registra este codificador para inyectarlo en autenticación y administración.
+    // Spring records this encoder to inject it into authentication and administration.
     @Bean
-    // Proporciona el codificador que login, altas y cambios de contraseña comparten.
+    // Use the same password encoder for sign-in, account creation and password changes.
     PasswordEncoder passwordEncoder() {
-        // El coste 12 hace más caro probar contraseñas robadas por fuerza bruta.
+        // The cost 12 makes it more expensive to try stolen passwords by gross force.
         return new BCryptPasswordEncoder(12);
     }
-    // Registra una plantilla para gestionar transacciones mediante bloques de código.
+    // It records a template to manage transactions through code blocks.
     @Bean
-    // Permite que AuthService delimite bloques transaccionales de forma explícita.
+    // It allows AuthService to delimit transactional blocks explicitly.
     TransactionTemplate transactionTemplate(PlatformTransactionManager manager) {
-        // Reutiliza el gestor transaccional de Spring; execute coordina commit y rollback.
+        // Reuse the Spring transactional manager; execute coordinates commit and rollback.
         return new TransactionTemplate(manager);
     }
-    // Registra la clave construida desde el secreto externo, sin escribirla en el repositorio.
+    // It records the key built from the external secret, without writing it in the repository.
     @Bean
-    // Lee el secreto externo y construye la clave utilizada para firmar y validar JWT.
+    // Read the external secret and build the key used to sign and validate JWT.
     SecretKeySpec jwtKey(@Value("${security.jwt.secret}") String secret) {
-        // Mide bytes UTF-8; el número de caracteres no garantiza el tamaño de la clave.
+        // Measure bytes UTF-8; the number of characters does not guarantee the size of the key.
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        // No permite arrancar con una clave demasiado corta para firmar tokens de forma segura.
+        // It does not allow to boot with a key too short to sign tokens safely.
         if (bytes.length < 32)
             throw new IllegalArgumentException("JWT_SECRET must contain at least 32 UTF-8 bytes");
-        // Asocia los bytes con el algoritmo HMAC; no genera una nueva clave aleatoria.
+        // It associates bytes with the HMAC algorithm; it does not generate a new random key.
         return new SecretKeySpec(bytes, "HmacSHA256");
     }
-    // Registra el firmador compartido de access tokens.
+    // Register the shared access firm tokens.
     @Bean
-    // Proporciona el firmador de JWT con la clave configurada.
+    // Provides the JWT firmer with the set key.
     JwtEncoder jwtEncoder(SecretKeySpec jwtKey) {
-        // Nimbus genera la firma; el contenido del JWT sigue siendo legible.
+        // Nimbus generates the signature; the content of the JWT remains legible.
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtKey));
     }
-    // Registra el verificador que Spring Security utilizará en las peticiones Bearer.
+    // Record the verifier that Spring Security will use on the Bearer requests.
     @Bean
-    // Prepara el verificador de firma y las reglas adicionales de validez.
+    // Prepare the signature verifier and the additional validity rules.
     JwtDecoder jwtDecoder(SecretKeySpec jwtKey, JdbcTemplate jdbc) {
-        // Solo admite el algoritmo HS256 con esta clave simétrica.
+        // It only supports the HS256 algorithm with this symmetrical key.
         var decoder =
                 NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();
-        // Además de la firma, cada token debe corresponder a una sesión aún vigente en la base de datos.
+        // In addition to the signature, each token must correspond to a session still in force in the database.
         OAuth2TokenValidator<Jwt> sessionValidator =
                 jwt -> {
-                    // Rechaza claims ausentes o mal formados sin convertirlos en una sesión válida.
+                    // Rejects absent or ill-formed claims without making them a valid session.
                     try {
-                        // Comprueba que el usuario siga activo y que la sesión no esté revocada ni vencida.
+                        // Check that the user is still active and that the session is not revoked or expired.
                         var count =
                                 jdbc.queryForObject(
                                         "SELECT count(*) FROM auth_session s JOIN app_user u ON"
@@ -90,53 +90,54 @@ public class SecurityConfiguration {
                                             + " u.active AND s.revoked_at IS NULL AND"
                                             + " s.expires_at>current_timestamp",
                                         Long.class,
-                                        // El claim sid identifica auth_session y subject debe coincidir con el usuario de esa sesión.
+                                        // The sid claim identifies the auth_session row. The subject must match
+                                        // the user for that session.
                                         UUID.fromString(jwt.getClaimAsString("sid")),
                                         jwt.getSubject());
-                        // Solo una coincidencia vigente permite validar esta parte del token.
+                        // Only an existing coincidence allows this part of the token to be validated.
                         if (count != null && count == 1)
                             return OAuth2TokenValidatorResult.success();
-                    // Un sid que no puede convertirse a UUID también invalida la sesión.
+                    // A Sid who cannot become UUID also invalidate the session.
                     } catch (IllegalArgumentException | NullPointerException exception) {
                         return invalidSession();
                     }
-                    // Si no encontró sesión válida, devuelve el mismo rechazo.
+                    // If you did not find a valid session, return the same rejection.
                     return invalidSession();
                 };
-        // Acepta solo tokens con fechas válidas, emitidos por esta aplicación y con sesión activa.
+        // Accepts only tokens with valid dates, issued by this application and with active session.
         decoder.setJwtValidator(
                 new DelegatingOAuth2TokenValidator<>(
-                        // Valida fechas sin margen adicional y exige el emisor de esta aplicación.
+                        // Check the token timestamps without clock skew and require this application’s issuer.
                         new JwtTimestampValidator(Duration.ZERO),
                         new JwtIssuerValidator("business-operations"),
                         sessionValidator));
-        // Entrega a Spring el decoder configurado; lo usará al procesar Bearer tokens.
+        // Deliver to Spring the configured decoder; use it when processing Bearer tokens.
         return decoder;
     }
-    // Produce un resultado de validación fallido, no una respuesta HTTP directa.
+    // It produces a failed validation result, not a direct HTTP response.
     private static OAuth2TokenValidatorResult invalidSession() {
         return OAuth2TokenValidatorResult.failure(
                 new OAuth2Error("invalid_token", "Session revoked or inactive", null));
     }
-    // Registra la cadena de filtros que protege las rutas HTTP.
+    // It records the filter chain that protects HTTP routes.
     @Bean
-    // Define la cadena de seguridad que Spring ejecuta antes de llegar a los controladores.
+    // Define the safety chain that Spring runs before reaching the drivers.
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JdbcTemplate jdbc,
             ObjectMapper mapper,
             @Value("${security.swagger-enabled:false}") boolean swaggerEnabled)
             throws Exception {
-        // No usa HttpSession para autenticar; sí guarda sesiones de tokens en auth_session.
-        // Desactiva CSRF y configura autenticación sin HttpSession, basada en el token de cada petición.
+        // Authenticate through the token sessions stored in auth_session. Configure Spring Security for
+        // stateless requests and disable CSRF.
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Declara qué rutas son públicas y cuáles exigen autenticación.
+                // It states which routes are public and which require authentication.
                 .authorizeHttpRequests(
                         requests -> {
-                            // Login, renovación del token y health check son rutas públicas.
-                            // Permite la interfaz, autenticación y health; los roles de negocio se comprueban aparte.
+                            // Login, token renewal and health check are public routes. It allows interface,
+                            // authentication and health; business roles are checked separately.
                             requests.requestMatchers(
                                             "/",
                                             "/index.html",
@@ -149,17 +150,17 @@ public class SecurityConfiguration {
                                             "/actuator/health",
                                             "/actuator/health/**")
                                     .permitAll();
-                            // La documentación solo queda pública en entornos donde se habilita explícitamente.
+                            // The documentation is only public in environments where it is explicitly enabled.
                             if (swaggerEnabled)
                                 requests.requestMatchers(
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/swagger-ui.html")
                                         .permitAll();
-                            // El resto de rutas exige un usuario autenticado.
+                            // The other routes require an authenticated user.
                             requests.anyRequest().authenticated();
                         })
-                // Las respuestas 401 y 403 usan el mismo formato JSON que el resto de la API.
+                // The 401 and 403 responses use the same JSON format as the rest of the API.
                 .exceptionHandling(
                         errors ->
                                 errors.authenticationEntryPoint(
@@ -180,7 +181,7 @@ public class SecurityConfiguration {
                                                                 403,
                                                                 "ACCESS_DENIED",
                                                                 "Insufficient permissions")))
-                // Spring valida el JWT recibido y crea la identidad de la petición.
+                // Spring validates the received JWT and creates the identity of the petition.
                 .oauth2ResourceServer(
                         resource ->
                                 resource.authenticationEntryPoint(
@@ -205,7 +206,8 @@ public class SecurityConfiguration {
                                                 jwt ->
                                                         jwt.jwtAuthenticationConverter(
                                                                 token -> {
-                                                                    // Lee el rol actual desde la base para reflejar cambios de permisos.
+                                                                    // Read the current role from the base to reflect permissions
+                                                                    // changes.
                                                                     var roles =
                                                                             jdbc.queryForList(
                                                                                     "SELECT role"
@@ -217,12 +219,14 @@ public class SecurityConfiguration {
                                                                                     String.class,
                                                                                     token
                                                                                             .getSubject());
-                                                                    // Un token de un usuario inexistente o inactivo no autentica la petición.
+                                                                    // A token from a non-existing or inactive user does not
+                                                                    // authenticate the request.
                                                                     if (roles.isEmpty())
                                                                         throw new OAuth2AuthenticationException(
                                                                                 new OAuth2Error(
                                                                                         "invalid_token"));
-                                                                    // Convierte el token y el rol vigente en la identidad de Spring Security.
+                                                                    // It converts the token and the current role in the identity
+                                                                    // of Spring Security.
                                                                     return new JwtAuthenticationToken(
                                                                             token,
                                                                             List.of(
@@ -232,10 +236,10 @@ public class SecurityConfiguration {
                                                                                                             .getFirst())),
                                                                             token.getSubject());
                                                                 })));
-        // Construye la cadena que usará Spring para filtrar las peticiones.
+        // Build the chain that Spring will use to filter the requests.
         return http.build();
     }
-    // Escribe errores originados en los filtros, fuera del manejo normal de excepciones de MVC.
+    // He writes errors originating in the filters, outside the normal handling of MVC exceptions.
     private static void error(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -244,11 +248,11 @@ public class SecurityConfiguration {
             String code,
             String detail)
             throws java.io.IOException {
-        // Prepara el estado y formato de respuesta; 401 también informa que se espera Bearer.
+        // Prepares the response status and format; 401 also reports that Bearer is expected.
         response.setStatus(status);
         response.setContentType("application/problem+json");
         if (status == 401) response.setHeader("WWW-Authenticate", "Bearer");
-        // Devuelve datos útiles para el cliente y el identificador que permite rastrear la petición en logs.
+        // Returns useful data to the client and the identifier that allows tracking the request in logs.
         mapper.writeValue(
                 response.getOutputStream(),
                 Map.of(

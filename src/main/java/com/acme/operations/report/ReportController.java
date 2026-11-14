@@ -1,5 +1,8 @@
 package com.acme.operations.report;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.acme.operations.common.PageResponse;
 
 import jakarta.validation.constraints.Max;
@@ -11,51 +14,54 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 
-// Spring atiende las rutas de esta clase y serializa los valores devueltos como JSON.
+// Spring handles requests to these routes and serializes the response as JSON.
+@Tag(name = "Reports")
 @RestController
-// Prefijo común de las rutas; se combina con el mapping de cada método.
+// Each method path is relative to this base path.
 @RequestMapping("/api/v1/reports")
-// Activa validación de restricciones en los parámetros de estos métodos.
+// Validate the constraints on method parameters.
 @Validated
-// Spring Security permite consultas a ADMIN, OPERATIONS y READONLY.
+// ADMIN, OPERATIONS and READONLY can read this resource.
 @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
 public class ReportController {
-    // Servicio al que el controlador delega las reglas y operaciones de negocio.
+    // The controller delegates business operations to this service.
     private final ReportService service;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public ReportController(ReportService service) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.service = service;
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "View sales by customer")
     @GetMapping("/sales")
-    // Consulta ventas completadas por cliente dentro del intervalo indicado.
+    // Check sales completed by customer within the specified interval.
     public PageResponse<ReportDtos.CustomerSales> sales(
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) Instant from,
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) Instant to,
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Consulta ventas completadas por cliente dentro del intervalo indicado.
+        // Check sales completed by customer within the specified interval.
         return service.sales(from, to, page, size);
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "View low-stock products and their confirmed order counts")
     @GetMapping("/low-stock")
-    // Consulta productos cuyo disponible cumple el umbral indicado.
+    // Check products available to meet the indicated threshold.
     public PageResponse<ReportDtos.LowStock> lowStock(
-            // Lee este parámetro de la URL y usa el valor indicado cuando falta.
+            // Use the default value when this query parameter is omitted.
             @RequestParam(defaultValue = "10") @Min(0) long threshold,
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Consulta productos cuyo disponible cumple el umbral indicado.
+        // Check products available to meet the indicated threshold.
         return service.lowStock(threshold, page, size);
     }
 }

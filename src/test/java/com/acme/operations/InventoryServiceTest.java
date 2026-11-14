@@ -18,111 +18,111 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// JUnit activa Mockito para crear los dobles e inyectarlos antes de cada prueba.
+// JUnit activates Mockito to create the doubles and inject them before each test.
 @ExtendWith(MockitoExtension.class)
-// Prueba la lógica de inventario aislada: no usa PostgreSQL ni verifica el commit real.
+// Test the isolated inventory logic: do not use PostgreSQL or check the actual commit.
 class InventoryServiceTest {
-    // Repositorio simulado: las consultas y escrituras se controlan y verifican desde la prueba.
+    // Simulated repository: the queries and scriptures are controlled and verified from the test.
     @Mock InventoryRepository repository;
-    // Auditoría simulada para comprobar si el servicio intenta registrar alguna acción.
+    // Simulated audit to check if the service is trying to record any action.
     @Mock AuditService audit;
-    // Mockito construye InventoryService usando los mocks anteriores.
+    // Mockito builds InventoryService using the above mocks.
     @InjectMocks InventoryService service;
 
-    // Ejecuta el mismo caso para cada cantidad fuera del rango permitido, incluido cero.
+    // Run the same case for each quantity outside the permitted range, including zero.
     @ParameterizedTest
     @ValueSource(longs = {0, 1000000001L, -1000000001L, Long.MAX_VALUE, Long.MIN_VALUE})
-    // Comprueba que una cantidad inválida se rechace antes de acceder a dependencias.
+    // It shows that an invalid amount is rejected before accessing dependencies.
     void rejectsUnsupportedAdjustmentsBeforeAnyWrite(long quantity) {
-        // Espera BusinessException al intentar el ajuste; aquí no se comprueba el código HTTP.
+        // Wait for BusinessException when trying to adjust; here the HTTP code is not checked.
         assertThatThrownBy(() -> service.adjust(1, new InventoryDtos.Adjustment(quantity, "Count")))
                 .isInstanceOf(BusinessException.class);
-        // Verifica que ni el repositorio ni la auditoría recibieron llamadas.
+        // He verifies that neither the repository nor the audit received calls.
         verifyNoInteractions(repository, audit);
     }
 
-    // Prueba que un ajuste no deje menos unidades físicas que las ya reservadas.
+    // Proof that an adjustment does not leave less physical units than those already reserved.
     @Test
     void adjustmentCannotConsumeReservedStock() {
-        // Simula un producto existente con 10 físicas y 8 reservadas.
+        // It simulates an existing product with 10 physical and 8 reserved.
         when(repository.productExists(4)).thenReturn(true);
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 8));
-        // Restar 5 dejaría 5 físicas para 8 reservadas, por lo que debe fallar.
+        // Subtract 5 would leave 5 physicists for 8 reserved, so you must fail.
         assertThatThrownBy(() -> service.adjust(4, new InventoryDtos.Adjustment(-5L, "Count")))
                 .isInstanceOf(BusinessException.class);
-        // Comprueba que el servicio no intentó guardar saldo, movimiento ni auditoría.
+        // It shows that the service did not attempt to save balance, movement or audit.
         verify(repository, never()).updateOnHand(anyLong(), anyLong());
         verify(repository, never())
                 .insertMovement(anyLong(), any(), anyString(), anyLong(), anyString());
         verifyNoInteractions(audit);
     }
 
-    // Comprueba la secuencia de un ajuste válido y los datos que se registran.
+    // Check the sequence of a valid adjustment and the data that are recorded.
     @Test
     void successfulAdjustmentRecordsBusinessContextAfterWrite() {
-        // El saldo inicial simulado es 10 físicas y 8 reservadas.
+        // The simulated starting balance is 10 physical and 8 reserved.
         when(repository.productExists(4)).thenReturn(true);
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 8));
-        // Añade 5 unidades; el nuevo saldo físico esperado es 15.
+        // Add 5 units; the new expected physical balance is 15.
         service.adjust(4, new InventoryDtos.Adjustment(5L, "Receipt"));
-        // inOrder permite exigir el orden de llamadas a ambos mocks.
+        // inOrder allows you to demand the call order from both mocks.
         var sequence = inOrder(repository, audit);
-        // Primero actualiza el saldo; después registra el movimiento y finalmente la auditoría.
+        // First, it updates the balance; then it records the movement and finally the audit.
         sequence.verify(repository).updateOnHand(4, 15);
         sequence.verify(repository).insertMovement(4, null, "ADJUSTMENT", 5, "Receipt");
         sequence.verify(audit).record("STOCK_ADJUSTED", "PRODUCT", "4", "5: Receipt");
     }
 
-    // Dos unidades disponibles no alcanzan para reservar tres.
+    // Two available units are not enough to book three.
     @Test
     void insufficientAvailableStockRejectsReservationBeforeWrites() {
-        // Simula 10 físicas y 8 reservadas sin consultar una base real.
+        // It simulates 10 physical and 8 reserved without consulting a real base.
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 8));
-        // Espera la excepción de stock insuficiente al solicitar tres unidades.
+        // He expects the exception of insufficient stock when applying for three units.
         assertThatThrownBy(() -> service.reserve(1, 4, 3))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Insufficient");
-        // Comprueba que no se intentó insertar una reserva ni un movimiento.
+        // It shows that no attempt was made to insert a reservation or movement.
         verify(repository, never()).insertReservation(anyLong(), anyLong(), anyLong());
         verify(repository, never())
                 .insertMovement(anyLong(), any(), anyString(), anyLong(), anyString());
     }
 
-    // Si hay stock disponible, la reserva y su movimiento usan la cantidad del pedido.
+    // If stock is available, the reserve and its movement use the amount of the order.
     @Test
     void sufficientAvailableStockCreatesReservationAndMovement() {
-        // Simula 10 unidades físicas y 2 reservadas: quedan 8 disponibles.
+        // It simulates 10 physical units and 2 reserved units: 8 are available.
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 2));
 
-        // El pedido 1 solicita reservar 3 unidades del producto 4.
+        // Order 1 requests to book 3 units of product 4.
         service.reserve(1, 4, 3);
 
-        // Comprueba la reserva y el movimiento que el servicio pide guardar.
+        // Check the reservation and movement the service asks to save.
         verify(repository).insertReservation(1, 4, 3);
         verify(repository).insertMovement(4, 1L, "RESERVE", 3, "Order confirmed");
     }
 
-    // Reservar cero unidades debe rechazarse antes de consultar o modificar el stock.
+    // Reserve zero units must be rejected before consulting or modifying stock.
     @Test
     void zeroQuantityCannotBeReserved() {
-        // Ejecuta la reserva inválida y comprueba el código y estado de la excepción.
+        // Run the invalid reservation and check the code and state of the exception.
         assertThatThrownBy(() -> service.reserve(1, 4, 0))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCode()).isEqualTo("INVALID_QUANTITY");
                     assertThat(exception.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
                 });
 
-        // La validación ocurre antes de llamar al repositorio o a la auditoría.
+        // Validation occurs before calling the repository or audit.
         verifyNoInteractions(repository, audit);
     }
 
-    // Una liberación debe corresponder a una reserva existente para ese pedido y cantidad.
+    // A release must correspond to an existing reservation for that order and quantity.
     @Test
     void missingReservationCannotReleaseStock() {
-        // Simula saldo reservado, pero el borrado devuelve cero filas: no coincide la reserva.
+        // It simulates reserved balance, but the erasure returns zero rows: the reservation does not match.
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 8));
         when(repository.deleteReservation(1, 4, 3)).thenReturn(0);
-        // Espera el rechazo y comprueba que no se ajusten saldos ni se añada movimiento.
+        // Wait for the rejection and check that no balances are adjusted and no movement added.
         assertThatThrownBy(() -> service.release(1, 4, 3, false))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Reservation");
@@ -131,21 +131,21 @@ class InventoryServiceTest {
                 .insertMovement(anyLong(), any(), anyString(), anyLong(), anyString());
     }
 
-    // Al cancelar, libera la reserva sin descontar productos físicos.
+    // When you cancel, you release the reservation without discounting physical products.
     @Test
     void cancellationReleasesReservationWithoutDebitingOnHand() {
-        // Simula saldo válido y que se borró exactamente una reserva.
+        // It simulates a valid balance and that a reservation was exactly deleted.
         when(repository.lock(4)).thenReturn(new InventoryRepository.LockedBalance(10, 8));
         when(repository.deleteReservation(1, 4, 3)).thenReturn(1);
-        // false representa cancelación: no hay salida física del almacén.
+        // false represents cancellation: no physical exit from the warehouse.
         service.release(1, 4, 3, false);
-        // Comprueba el orden: bloqueo, borrado, resta de reservado y movimiento RELEASE.
+        // Check the sequence: lock the row, delete the reservation, reduce reserved stock and record RELEASE.
         var sequence = inOrder(repository);
         sequence.verify(repository).lock(4);
         sequence.verify(repository).deleteReservation(1, 4, 3);
-        // El último cero indica que on_hand no debe disminuir.
+        // The last zero indicates that on_hand should not decrease.
         sequence.verify(repository).decreaseReservedAndOnHand(4, 3, 0);
-        // El movimiento guarda -3 porque libera tres unidades reservadas.
+        // The movement keeps -3 because it releases three reserved units.
         sequence.verify(repository).insertMovement(4, 1L, "RELEASE", -3, "Order cancelled");
     }
 }

@@ -1,5 +1,8 @@
 package com.acme.operations.replenishment;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.acme.operations.common.PageResponse;
 
 import jakarta.validation.Valid;
@@ -12,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Replenishment")
 @RestController
 @RequestMapping("/api/v1/replenishment")
 @Validated
@@ -23,11 +27,13 @@ public class ReplenishmentController {
         this.service = service;
     }
 
+    @Operation(summary = "View the stock thresholds and preferred supplier for a product")
     @GetMapping("/policies/{productId}")
     public ReplenishmentDtos.Policy get(@PathVariable @Positive long productId) {
         return service.get(productId);
     }
 
+    @Operation(summary = "Set the minimum stock, target stock and preferred supplier")
     @PutMapping("/policies/{productId}")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ReplenishmentDtos.Policy upsert(
@@ -35,6 +41,7 @@ public class ReplenishmentController {
         return service.upsert(productId,input);
     }
 
+    @Operation(summary = "List replenishment policies")
     @GetMapping("/policies")
     public PageResponse<ReplenishmentDtos.Policy> policies(
             @RequestParam(required = false) @Positive Long productId,
@@ -46,6 +53,8 @@ public class ReplenishmentController {
         return service.policies(productId,preferredSupplierId,active,search,page,size);
     }
 
+    @Operation(summary = "List suggested quantities to purchase",
+            description = "Compare available stock plus outstanding purchases with the minimum stock level for each product.")
     @GetMapping("/proposals")
     public PageResponse<ReplenishmentDtos.Proposal> proposals(
             @RequestParam(required = false) @Positive Long productId,

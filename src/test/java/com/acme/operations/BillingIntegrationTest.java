@@ -232,24 +232,27 @@ class BillingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void concurrentDifferentPaymentsCannotCollectMoreThanTheOutstandingBalance() throws Exception {
-        Sale sale = sale(2, "10.00");
+        Sale sale = sale(1, "87.50");
         long invoice = issue(sale.orderId(), today()).path("id").asLong();
+        assertThat(invoice(invoice).path("balance").decimalValue()).isEqualByComparingTo("100.00");
         var start = new CyclicBarrier(2);
         try (var executor = Executors.newFixedThreadPool(2)) {
             var first = executor.submit(() -> {
                 start.await(10, TimeUnit.SECONDS);
-                return rawPayment(invoice, settlement(UUID.randomUUID(), "25.00", "Bank A"));
+                return rawPayment(invoice, settlement(UUID.randomUUID(), "70.00", "Bank A"));
             });
             var second = executor.submit(() -> {
                 start.await(10, TimeUnit.SECONDS);
-                return rawPayment(invoice, settlement(UUID.randomUUID(), "25.00", "Bank B"));
+                return rawPayment(invoice, settlement(UUID.randomUUID(), "70.00", "Bank B"));
             });
-            assertThat(List.of(first.get(20, TimeUnit.SECONDS).status(), second.get(20, TimeUnit.SECONDS).status()))
-                    .containsExactlyInAnyOrder(200, 409);
+            var responses = List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS));
+            assertThat(responses).extracting(Raw::status).containsExactlyInAnyOrder(200, 409);
+            var conflict = responses.stream().filter(response -> response.status() == 409).findFirst().orElseThrow();
+            assertThat(json(conflict.body()).path("code").asText()).isEqualTo("PAYMENT_EXCEEDS_BALANCE");
         }
         assertThat(entryCount(invoice)).isEqualTo(1);
-        assertThat(invoice(invoice).path("netPaid").decimalValue()).isEqualByComparingTo("25.00");
-        assertThat(invoice(invoice).path("balance").decimalValue()).isEqualByComparingTo("7.50");
+        assertThat(invoice(invoice).path("netPaid").decimalValue()).isEqualByComparingTo("70.00");
+        assertThat(invoice(invoice).path("balance").decimalValue()).isEqualByComparingTo("30.00");
     }
 
     @Test

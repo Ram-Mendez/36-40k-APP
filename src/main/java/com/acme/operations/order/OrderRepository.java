@@ -14,81 +14,83 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-// Spring registra el acceso a datos; aquí escribimos el SQL y mapeamos sus resultados.
+// Spring registers this repository. Its methods execute SQL and map the results.
 @Repository
 public class OrderRepository {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public OrderRepository(JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // Agrupa datos generales del pedido; no incluye productos, que se consultan como líneas.
+    // It gathers general order data; it does not include products, which are consulted as lines.
     public record Header(
-            // Identificador del pedido; no es el customerId usado para crearlo.
+            // ID of this sales order. The customerId identifies the customer who placed it.
             long id,
-            // Cliente propietario del pedido y nombre obtenido mediante JOIN.
+            // Customer owner of the order and name obtained by JOIN.
             long customerId,
             String customerName,
-            // Estado e importe general del pedido.
+            // State and general amount of order.
             String status,
             BigDecimal total,
-            // Versión del pedido utilizada para detectar cambios entre lectura y finalización.
+            // Order version used to detect changes between reading and finishing.
             long version,
-            // Datos de la cotización de envío, que pueden ser null antes de completar.
+            // Shipping quotation data, which can be null before completing.
             String shippingReference,
             BigDecimal shippingCost,
-            // Fechas persistidas de creación y última modificación.
+            // Persistent dates of creation and last modification.
             Instant createdAt,
             Instant updatedAt) {}
 
-    // Busca el pedido y el nombre de su cliente; lock decide si se protege para modificarlo.
+    // Find your client's order and name; lock decides if it is protected to modify it.
     public Header header(long id, boolean lock) {
-        // JOIN relaciona customer_id con customer.id; el ? recibe el id del pedido.
+        // Join customer_id to customer.id and bind the order ID to the placeholder.
         var result =
                 jdbc.query(
                         "SELECT o.*,c.name AS customer_name FROM sales_order o JOIN customer c ON"
                             + " c.id=o.customer_id WHERE o.id=?"
-                                // Con true bloquea solo la fila de sales_order (alias o), no la fila del cliente.
+                                // When the flag is true, lock the sales_order row using alias o.
                                 + (lock ? " FOR UPDATE OF o" : ""),
-                        // JDBC llama al mapper por fila; rs permite leer columnas por su nombre.
+                        // JDBC calls the mapper per row; rs allows you to read columns by name.
                         (rs, n) ->
                                 new Header(
-                                        // id pertenece al pedido; customer_id identifica al cliente asociado.
+                                        // The id identifies the sales order. Its customer_id identifies the
+                                        // customer.
                                         rs.getLong("id"),
                                         rs.getLong("customer_id"),
-                                        // customer_name es el alias del nombre obtenido mediante el JOIN.
+                                        // Use the customer_name alias to read the name returned by the join.
                                         rs.getString("customer_name"),
                                         rs.getString("status"),
-                                        // Total y versión proceden de sales_order, no del parámetro recibido.
+                                        // Read the total and version from sales_order.
                                         rs.getBigDecimal("total"),
                                         rs.getLong("version"),
-                                        // La referencia y el coste pueden faltar si el pedido todavía no se completó.
+                                        // The reference and the cost may be missing if the order is not yet
+                                        // completed.
                                         rs.getString("shipping_reference"),
                                         rs.getBigDecimal("shipping_cost"),
-                                        // Convierte los timestamps de SQL a Instant para representarlos en Java.
+                                        // Convert the SQL timstamps to Instant to represent them in Java.
                                         rs.getTimestamp("created_at").toInstant(),
                                         rs.getTimestamp("updated_at").toInstant()),
-                        // Este id rellena WHERE o.id=?; no es el id del cliente.
+                        // This id fills WHERE o.id =?; it is not the customer's id.
                         id);
-        // Una lista vacía indica que no se encontró el pedido.
+        // An empty list indicates that the order was not found.
         if (result.isEmpty())
-            // El handler convierte este error de negocio en HTTP 404.
+            // The handler turns this business error into HTTP 404.
             throw new BusinessException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found");
-        // Devuelve la única cabecera encontrada, no la lista completa.
+        // Returns the only header found, not the complete list.
         return result.getFirst();
     }
 
-    // Lee los productos del pedido; una línea representa un producto y su cantidad.
+    // Read the products of the order; a line represents a product and its quantity.
     public List<OrderDtos.Line> lines(long id) {
-        // JOIN añade SKU y nombre; ordenar por producto ayuda a mantener el orden de bloqueos.
+        // JOIN adds SKU and name; ordering by product helps to maintain the order of blockages.
         return jdbc.query(
                 "SELECT l.*,p.sku,p.name FROM order_line l JOIN product p ON p.id=l.product_id"
                     + " WHERE l.order_id=? ORDER BY l.product_id",
-                // Transforma la fila SQL en el DTO Line para la respuesta.
+                // Transforms the SQL row into the DTO Line for the response.
                 (rs, n) ->
                         new OrderDtos.Line(
                                 rs.getLong("id"),
@@ -97,21 +99,21 @@ public class OrderRepository {
                                 rs.getString("name"),
                                 rs.getLong("quantity"),
                                 rs.getBigDecimal("unit_price"),
-                                // El total de línea se calcula multiplicando precio pactado por unidades.
+                                // The total line is calculated by multiplying price agreed by units.
                                 rs.getBigDecimal("unit_price")
                                         .multiply(BigDecimal.valueOf(rs.getLong("quantity")))),
                 id);
     }
 
-    // Construye el pedido completo mediante dos consultas: cabecera y líneas.
+    // Build the full order by two consultations: header and lines.
     public OrderDtos.Order get(long id) {
-        // false consulta sin solicitar FOR UPDATE; view reúne ambos resultados.
+        // False consult without requesting FOR UPDATE; view gathers both results.
         return view(header(id, false), lines(id));
     }
 
-    // Esta conversión la hacemos nosotros; Spring no rellena el pedido a partir de customerId.
+    // Map customerId explicitly when building the order.
     private OrderDtos.Order view(Header h, List<OrderDtos.Line> lines) {
-        // Copia los datos de cabecera y añade la lista de líneas al DTO Order.
+        // Copy the header data and add the list of lines to the DTO Order.
         return new OrderDtos.Order(
                 h.id(),
                 h.customerId(),
@@ -126,7 +128,7 @@ public class OrderRepository {
                 lines);
     }
 
-    // Rechaza productos ausentes o inactivos y bloquea su fila durante la transacción.
+    // It rejects missing or inactive products and blocks its row during the transaction.
     public void requireActiveProduct(long id) {
         List<Boolean> activeRows =
                 jdbc.queryForList(
@@ -142,46 +144,46 @@ public class OrderRepository {
         }
     }
 
-    // Valida al cliente y usa FOR SHARE para impedir cambios incompatibles durante la transacción.
+    // Valid to the customer and use FOR SHARE to prevent incompatible changes during the transaction.
     public void requireActiveCustomer(long id) {
         var matches =
                 jdbc.queryForList(
                         "SELECT active FROM customer WHERE id=? FOR SHARE", Boolean.class, id);
-        // Si no hubo filas el cliente no existe; el resultado será 404.
+        // If there were no rows the client does not exist; the result will be 404.
         if (matches.isEmpty())
             throw new BusinessException(
                     HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found");
-        // Si existe pero está inactivo, la operación falla con 409.
+        // If it exists but is inactive, the operation fails with 409.
         if (!matches.getFirst())
             throw new BusinessException(
                     HttpStatus.CONFLICT, "CUSTOMER_INACTIVE", "Customer is inactive");
     }
 
-    // Lee el precio de un producto activo; FOR SHARE protege esa lectura durante la transacción.
+    // Read the price of an active product; FOR SHARE protects that reading during the transaction.
     public BigDecimal activePrice(long productId) {
         var matches =
                 jdbc.queryForList(
                         "SELECT unit_price FROM product WHERE id=? AND active=true FOR SHARE",
                         BigDecimal.class,
                         productId);
-        // Sin coincidencia no se permite usar el producto para esta operación.
+        // Without coincidence, the product is not allowed to be used for this operation.
         if (matches.isEmpty())
             throw new BusinessException(
                     HttpStatus.CONFLICT, "PRODUCT_UNAVAILABLE", "Product is missing or inactive");
-        // Devuelve el precio monetario leído como BigDecimal.
+        // Returns the monetary price read as BigDecimal.
         return matches.getFirst();
     }
 
-    // Inserta un pedido nuevo asociado al cliente y obtiene su identificador generado.
+    // Insert a new order associated with the client and get its generated identifier.
     public long create(long customerId) {
-        // RETURNING id devuelve sales_order.id como Long; los demás campos usan los valores de la tabla.
+        // Read the generated sales_order.id as a Long. Database defaults supply the other fields.
         return jdbc.queryForObject(
                 "INSERT INTO sales_order(customer_id) VALUES (?) RETURNING id",
                 Long.class,
                 customerId);
     }
 
-    // Cambia el cliente del pedido e incrementa su versión; el servicio ya validó el estado.
+    // Change the order client and increase its version; the service has already validated the status.
     public void customer(long id, long customerId) {
         jdbc.update(
                 "UPDATE sales_order SET customer_id=?,version=version+1,updated_at=now() WHERE"
@@ -190,9 +192,9 @@ public class OrderRepository {
                 id);
     }
 
-    // Mantiene una línea por pedido y producto usando la clave única de esa pareja.
+    // It maintains a line per order and product using that couple's unique key.
     public void setLine(long id, long productId, long quantity, BigDecimal currentPrice) {
-        // En el conflicto de clave única, la línea conserva su precio pactado.
+        // In the single key conflict, the line retains its agreed price.
         jdbc.update(
                 "INSERT INTO order_line(order_id,product_id,quantity,unit_price) VALUES (?,?,?,?)"
                     + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=excluded.quantity",
@@ -200,23 +202,23 @@ public class OrderRepository {
                 productId,
                 quantity,
                 currentPrice);
-        // Actualiza el total del pedido para reflejar la cantidad recién guardada.
+        // Update the order total to reflect the amount recently saved.
         recalculate(id);
     }
 
-    // Borra una línea concreta y exige que realmente existiera.
+    // It erases a specific line and demands that it really exist.
     public void removeLine(long id, long productId) {
-        // jdbc.update devuelve filas afectadas, no la versión ni el número de columnas.
+        // jdbc.update returns affected rows, not the version or number of columns.
         if (jdbc.update("DELETE FROM order_line WHERE order_id=? AND product_id=?", id, productId)
                 == 0)
-            // Cero filas significa que no había una línea con esos dos ids: se devuelve 404.
+            // Zero rows means there was no line with those two ids: it returns 404.
             throw new BusinessException(
                     HttpStatus.NOT_FOUND, "ORDER_LINE_NOT_FOUND", "Order line not found");
-        // Recalcula el pedido después de retirar su línea.
+        // Recalculate the order after you withdraw your line.
         recalculate(id);
     }
 
-    // Suma precio por cantidad de todas las líneas; sin líneas el total es cero.
+    // The price per quantity of all the lines; without lines the total is zero.
     private void recalculate(long id) {
         BigDecimal amount =
                 jdbc.queryForObject(
@@ -224,14 +226,14 @@ public class OrderRepository {
                             + " order_id=?",
                         BigDecimal.class,
                         id);
-        // Persiste el total y aumenta la versión para señalar que el pedido cambió.
+        // The total remains and the version increases to point out that the order changed.
         jdbc.update(
                 "UPDATE sales_order SET total=?,version=version+1,updated_at=now() WHERE id=?",
                 amount,
                 id);
     }
 
-    // Guarda el estado y los datos de envío; las reglas de transición están en el servicio.
+    // Save the status and shipping data; the transitional rules are in the service.
     public void transition(long id, String status, String reference, BigDecimal cost) {
         jdbc.update(
                 "UPDATE sales_order SET"
@@ -243,10 +245,10 @@ public class OrderRepository {
                 id);
     }
 
-    // Busca pedidos con filtros opcionales y carga sus líneas por lotes.
+    // Search for orders with optional filters and load your lines in lots.
     public PageResponse<OrderDtos.Order> search(
             Long customerId, String status, int page, int size, String sort) {
-        // Solo admite estos órdenes conocidos: no concatena un nombre de columna libre del usuario.
+        // It only supports these known orders: it does not concatea free column name of the user.
         String orderBy =
                 switch (sort) {
                     case "createdAt,asc" -> "o.created_at ASC,o.id ASC";
@@ -260,33 +262,33 @@ public class OrderRepository {
                                     "Allowed sorts: createdAt,asc; createdAt,desc; total,asc;"
                                         + " total,desc");
                 };
-        // WHERE 1=1 permite añadir filtros AND sin comprobar cuál es el primero.
+        // WHERE 1 = 1 allows you to add AND filters without checking which one is the first.
         StringBuilder where = new StringBuilder(" WHERE 1=1");
-        // Guarda parámetros en el mismo orden en que aparecen los ? del SQL.
+        // Collect parameters in the order of their SQL placeholders.
         List<Object> args = new ArrayList<>();
-        // Añade el filtro por cliente únicamente cuando se proporcionó.
+        // Add the filter per customer only when provided.
         if (customerId != null) {
             where.append(" AND o.customer_id=?");
             args.add(customerId);
         }
-        // Si se envió estado, comprueba que pertenezca a la lista admitida.
+        // If it was sent status, check that it belongs to the admitted list.
         if (status != null) {
-            // Rechaza valores desconocidos antes de ejecutar SQL.
+            // Rejects unknown values before running SQL.
             if (!List.of("DRAFT", "CONFIRMED", "COMPLETED", "CANCELLED").contains(status))
                 throw new BusinessException(
                         HttpStatus.BAD_REQUEST, "INVALID_STATUS", "Unknown order status");
-            // Añade el estado como parámetro, no como texto SQL concatenado.
+            // Add the state as a parameter, not as a concatenated SQL text.
             where.append(" AND o.status=?");
             args.add(status);
         }
-        // Cuenta pedidos que cumplen los filtros antes de aplicar LIMIT y OFFSET.
+        // It counts orders that meet the filters before applying LIMIT and OFSET.
         long count =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM sales_order o" + where, Long.class, args.toArray());
-        // size limita las filas; page*size omite páginas anteriores (page empieza en cero).
+        // size limits rows; page * size omits previous pages (page starts at zero).
         args.add(size);
         args.add((long) page * size);
-        // Consulta las cabeceras de esta página junto con el nombre del cliente.
+        // See the headers of this page along with the customer name.
         var headers =
                 jdbc.query(
                         "SELECT o.*,c.name AS customer_name FROM sales_order o JOIN customer c ON"
@@ -295,7 +297,7 @@ public class OrderRepository {
                                 + " ORDER BY "
                                 + orderBy
                                 + " LIMIT ? OFFSET ?",
-                        // Cada fila se transforma en Header; las líneas se cargan en la consulta siguiente.
+                        // Each row is transformed into Header; the lines are loaded in the next consultation.
                         (rs, n) ->
                                 new Header(
                                         rs.getLong("id"),
@@ -309,16 +311,16 @@ public class OrderRepository {
                                         rs.getTimestamp("created_at").toInstant(),
                                         rs.getTimestamp("updated_at").toInstant()),
                         args.toArray());
-        // Si no hay cabeceras evita ejecutar un IN vacío.
+        // If there are no headers, it avoids running an empty IN.
         if (headers.isEmpty())
-            // Devuelve contenido vacío pero conserva el total para informar de la paginación.
+            // Returns empty content but keeps the total to report the pagation.
             return new PageResponse<>(
                     List.of(), page, size, count, (int) ((count + size - 1) / size));
-        // Genera un ? por pedido; los ids siguen pasando como parámetros JDBC.
+        // It generates an? per order; the ids continue to pass as JDBC parameters.
         String placeholders = String.join(",", java.util.Collections.nCopies(headers.size(), "?"));
-        // Mantiene el id del pedido junto a cada línea para poder agruparlas después.
+        // It keeps the order id next to each line to be able to group them later.
         record OrderLine(long orderId, OrderDtos.Line line) {}
-        // Carga todas las líneas de la página en una consulta, evitando una consulta por pedido.
+        // Load all the lines of the page into a query, avoiding a query on request.
         var lineRows =
                 jdbc.query(
                         "SELECT l.*,p.sku,p.name FROM order_line l JOIN product p ON"
@@ -326,10 +328,10 @@ public class OrderRepository {
                                 + placeholders
                                 + ") ORDER BY l.order_id,l.product_id",
                         (rs, n) -> {
-                            // Lee precio y cantidad una vez para calcular el total de la línea.
+                            // Read price and quantity once to calculate the total line.
                             BigDecimal price = rs.getBigDecimal("unit_price");
                             long quantity = rs.getLong("quantity");
-                            // Construye la línea con datos del producto y del pedido.
+                            // Build the line with product and order data.
                             var line =
                                     new OrderDtos.Line(
                                             rs.getLong("id"),
@@ -339,19 +341,19 @@ public class OrderRepository {
                                             quantity,
                                             price,
                                             price.multiply(BigDecimal.valueOf(quantity)));
-                            // Asocia la línea al pedido que la contiene.
+                            // It associates the line to the order that contains it.
                             return new OrderLine(rs.getLong("order_id"), line);
                         },
-                        // Los ids de las cabeceras rellenan los ? del IN en el mismo orden.
+                        // The head ids fill in the IN's? in the same order.
                         headers.stream().map(Header::id).toArray());
-        // Agrupa las líneas por orderId para recuperarlas al construir cada pedido.
+        // Group lines by orderId to assemble each order.
         Map<Long, List<OrderDtos.Line>> grouped =
                 lineRows.stream()
                         .collect(
                                 Collectors.groupingBy(
                                         OrderLine::orderId,
                                         Collectors.mapping(OrderLine::line, Collectors.toList())));
-        // Une cada cabecera con sus líneas y devuelve la página completa.
+        // Unite each header with its lines and return the full page.
         return new PageResponse<>(
                 headers.stream()
                         .map(h -> view(h, grouped.getOrDefault(h.id(), List.of())))

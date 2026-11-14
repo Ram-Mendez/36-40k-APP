@@ -5,36 +5,36 @@ import com.acme.operations.common.PageResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-// Spring registra el acceso a datos; aquí escribimos el SQL y mapeamos sus resultados.
+// Spring registers this repository. Its methods execute SQL and map the results.
 @Repository
 public class InventoryRepository {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public InventoryRepository(JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // Foto de las cantidades leídas; el bloqueo vive en PostgreSQL, no en este record.
+    // This record holds a snapshot of the quantities. PostgreSQL holds the row lock.
     public record LockedBalance(long onHand, long reserved) {}
 
-    // Debe ejecutarse dentro de la transacción del servicio para conservar el bloqueo.
+    // It must be run within the service transaction to keep the lock.
     public LockedBalance lock(long productId) {
-        // Crea el saldo si falta; ON CONFLICT evita duplicarlo si ya existe.
+        // Create the balance if it is missing; ON CONFLICT avoids doubling it if it already exists.
         jdbc.update(
                 "INSERT INTO inventory_balance(product_id) VALUES (?) ON CONFLICT DO NOTHING",
                 productId);
-        // SELECT FOR UPDATE lee y bloquea la fila con este productId hasta commit o rollback.
+        // SELECT FOR UPDATE reads and blocks the row with this productId up to commit or rollback.
         return jdbc.queryForObject(
                 "SELECT on_hand,reserved FROM inventory_balance WHERE product_id=? FOR UPDATE",
-                // rs representa la fila; las posiciones 1 y 2 corresponden a on_hand y reserved.
+                // rs represents the row; positions 1 and 2 correspond to on_hand and reserved.
                 (rs, n) -> new LockedBalance(rs.getLong(1), rs.getLong(2)),
                 productId);
     }
 
-    // Pregunta si existe el producto, independientemente de cuánto stock tenga.
+    // She asked if the product existed, regardless of how much stock it had.
     public boolean productExists(long productId) {
         return Boolean.TRUE.equals(
                 jdbc.queryForObject(
@@ -43,24 +43,24 @@ public class InventoryRepository {
                         productId));
     }
 
-    // Recibe el total físico ya calculado; version=version+1 no vuelve a poner la versión en 1.
+    // Receive the already calculated physical total; version = version + 1 does not put the version back in 1.
     public void updateOnHand(long productId, long onHand) {
-        // El primer ? recibe onHand y el segundo productId: JDBC los asigna por posición.
+        // The first? receives onHand and the second productId: JDBC assigns them by position.
         jdbc.update(
                 "UPDATE inventory_balance SET on_hand=?,version=version+1 WHERE product_id=?",
                 onHand,
                 productId);
     }
 
-    // Actualiza el total reservado y crea el detalle de qué pedido lo reservó.
+    // Update the total reserved and create the detail of which order you reserved.
     public void insertReservation(long orderId, long productId, long quantity) {
-        // Suma quantity al reserved actual; el segundo ? selecciona el producto.
+        // Add quantity to the current reserve; the second? selects the product.
         jdbc.update(
                 "UPDATE inventory_balance SET reserved=reserved+?,version=version+1 WHERE"
                     + " product_id=?",
                 quantity,
                 productId);
-        // Relaciona pedido, producto y cantidad; estos ids son referencias, no el id del movimiento.
+        // Relation order, product and quantity; these ids are references, not the id of movement.
         jdbc.update(
                 "INSERT INTO stock_reservation(order_id,product_id,quantity) VALUES (?,?,?)",
                 orderId,
@@ -68,7 +68,7 @@ public class InventoryRepository {
                 quantity);
     }
 
-    // Devuelve cuántas filas borró; el servicio exige 1 para confirmar que la reserva coincidía.
+    // Returns how many rows you erased; the service requires 1 to confirm that the reservation coincided.
     public int deleteReservation(long orderId, long productId, long quantity) {
         return jdbc.update(
                 "DELETE FROM stock_reservation WHERE order_id=? AND product_id=? AND quantity=?",
@@ -77,7 +77,7 @@ public class InventoryRepository {
                 quantity);
     }
 
-    // Aplica las dos restas sobre los valores actuales; enviar consume físico y reservado.
+    // Apply the two subsets on current values; send physical and reserved consummation.
     public void decreaseReservedAndOnHand(
             long productId, long reservedQuantity, long shippedQuantity) {
         jdbc.update(
@@ -88,7 +88,7 @@ public class InventoryRepository {
                 productId);
     }
 
-    // Añade una entrada al historial; PostgreSQL genera el identificador propio del movimiento.
+    // Add an entry to the history; PostgreSQL generates the proper identifier of the movement.
     public void insertMovement(
             long productId, Long orderId, String kind, long quantity, String reason) {
         jdbc.update(
@@ -101,29 +101,30 @@ public class InventoryRepository {
                 reason);
     }
 
-    // Devuelve una página de saldos, opcionalmente limitada a un producto.
+    // Returns a balance page, optionally limited to a product.
     public PageResponse<InventoryDtos.Balance> balances(Long productId, int page, int size) {
-        // Si no llega productId no hay WHERE; si llega, se añade un único parámetro ?.
+        // If no productId arrives there is no WHERE; if it arrives, a single parameter is added?.
         String where = productId == null ? "" : " WHERE p.id=?";
-        // El conteo usa solo el filtro; todavía no necesita LIMIT ni OFFSET.
+        // The count uses only the filter; it does not yet need LIMIT or OFSET.
         Object[] countArgs = productId == null ? new Object[] {} : new Object[] {productId};
-        // Cuenta todos los productos coincidentes para calcular el total de páginas.
+        // It counts all the matching products to calculate the total pages.
         long count =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM product p" + where, Long.class, countArgs);
-        // Los argumentos siguen el orden de los ?: filtro opcional, size y page*size.
+        // Bind the optional filter first, followed by the limit and offset.
         Object[] args =
                 productId == null
                         ? new Object[] {size, (long) page * size}
                         : new Object[] {productId, size, (long) page * size};
-        // LEFT JOIN incluye productos sin saldo; COALESCE representa sus cantidades ausentes como cero.
+        // LEFT JOIN includes products without an inventory row. COALESCE gives those products a zero balance.
         var rows =
                 jdbc.query(
                         "SELECT p.id,p.sku,p.name,coalesce(i.on_hand,0),coalesce(i.reserved,0) FROM"
                             + " product p LEFT JOIN inventory_balance i ON i.product_id=p.id"
                                 + where
                                 + " ORDER BY p.id LIMIT ? OFFSET ?",
-                        // El mapper convierte cada fila SQL en un Balance; n es el índice de fila y aquí no se usa.
+                        // The mapper turns each SQL row into a Balance; n is the row index and here it is not
+                        // used.
                         (rs, n) ->
                                 new InventoryDtos.Balance(
                                         rs.getLong(1),
@@ -131,28 +132,29 @@ public class InventoryRepository {
                                         rs.getString(3),
                                         rs.getLong(4),
                                         rs.getLong(5),
-                                        // Calcula disponible restando reservado a físico; las columnas JDBC empiezan en 1.
+                                        // Calculate available by subtracting reserved to physical; JDBC columns
+                                        // start at 1.
                                         rs.getLong(4) - rs.getLong(5)),
                         args);
-        // Devuelve resultados y metadatos; la división redondea hacia arriba el total de páginas.
+        // Returns results and metadata; the division round up total pages.
         return new PageResponse<>(rows, page, size, count, (int) ((count + size - 1) / size));
     }
 
-    // Lista los movimientos registrados para una consulta paginada.
+    // List the movements registered for a paged consultation.
     public PageResponse<InventoryDtos.Movement> movements(Long productId, int page, int size) {
-        // Reutiliza el mismo filtro en el conteo y en la consulta paginada.
+        // It reuses the same filter in the count and in the pagated query.
         String where = productId == null ? "" : " WHERE product_id=?";
         Object[] countArgs = productId == null ? new Object[] {} : new Object[] {productId};
-        // LIMIT recibe size; OFFSET recibe page*size porque page comienza en cero.
+        // LIMIT receives size; OFSET receives page * size because page starts at zero.
         Object[] args =
                 productId == null
                         ? new Object[] {size, (long) page * size}
                         : new Object[] {productId, size, (long) page * size};
-        // El conteo no lleva paginación: mide todos los movimientos que cumplen el filtro.
+        // The count does not carry pagination: it measures all the movements that meet the filter.
         long count =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM stock_movement" + where, Long.class, countArgs);
-        // Lee solo la página solicitada y transforma cada fila en un DTO de movimiento.
+        // Read only the requested page and transform each row into a DTO of movement.
         var rows =
                 jdbc.query(
                         "SELECT * FROM stock_movement"
@@ -162,22 +164,23 @@ public class InventoryRepository {
                                 new InventoryDtos.Movement(
                                         rs.getLong("id"),
                                         rs.getLong("product_id"),
-                                        // Long permite conservar null cuando el movimiento no pertenece a ningún pedido.
+                                        // Long allows to preserve null when the movement does not belong to any
+                                        // order.
                                         rs.getObject("order_id", Long.class),
                                         rs.getString("kind"),
                                         rs.getLong("quantity"),
                                         rs.getString("reason"),
                                         rs.getTimestamp("created_at").toInstant()),
                         args);
-        // Entrega el historial paginado sin modificar inventario.
+        // Deliver the paid history without changing inventory.
         return new PageResponse<>(rows, page, size, count, (int) ((count + size - 1) / size));
     }
 
-    // Lista el detalle de reservas: pedido, producto, SKU y unidades comprometidas.
+    // List the reservation details: order, product, SKU and compromised units.
     public PageResponse<InventoryDtos.Reservation> reservations(int page, int size) {
-        // Cuenta reservas, no productos ni unidades totales.
+        // Count reservation records rather than adding the number of units.
         long count = jdbc.queryForObject("SELECT count(*) FROM stock_reservation", Long.class);
-        // Une cada reserva con su producto para devolver también el SKU.
+        // Join each reservation with your product to return the SKU as well.
         var rows =
                 jdbc.query(
                         "SELECT r.order_id,r.product_id,p.sku,r.quantity FROM stock_reservation r"
@@ -189,10 +192,10 @@ public class InventoryRepository {
                                         rs.getLong(2),
                                         rs.getString(3),
                                         rs.getLong(4)),
-                        // Estos valores rellenan LIMIT y OFFSET, en ese orden.
+                        // These values fill in LIMIT and OFSET in that order.
                         size,
                         (long) page * size);
-        // Entrega la página de reservas junto con sus totales.
+        // Deliver the booking page along with its totals.
         return new PageResponse<>(rows, page, size, count, (int) ((count + size - 1) / size));
     }
 }

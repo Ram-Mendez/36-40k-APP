@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 
-// Un solo componente mantiene el mismo trazo en toda la interfaz.
+// Use the same stroke width for icons throughout the application.
 @Component({
   selector: 'app-icon',
   template: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="paths[name()] || paths['box']" /></svg>`,

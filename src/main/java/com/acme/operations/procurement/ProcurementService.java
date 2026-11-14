@@ -149,7 +149,7 @@ public class ProcurementService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ProcurementDtos.Purchase cancel(long id) {
-        requireState(repository.header(id, true), Set.of("DRAFT", "SUBMITTED", "PARTIALLY_RECEIVED"));
+        requireState(repository.header(id, true), Set.of("DRAFT", "SUBMITTED"));
         repository.transition(id, "CANCELLED");
         audit.record("PURCHASE_ORDER_CANCELLED", "PURCHASE_ORDER", Long.toString(id), "Cancelled before any receipt");
         return repository.get(id);

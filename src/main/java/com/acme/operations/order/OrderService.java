@@ -14,255 +14,255 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
 public class OrderService {
-    // Acceso a persistencia separado de las reglas que coordina este servicio.
+    // The repository handles persistence for this service.
     private final OrderRepository repository;
-    // Gestiona reservas y saldos dentro de la transacción del pedido.
+    // It manages reserves and balances within the order transaction.
     private final InventoryService inventory;
-    // Servicio de auditoría compartido para registrar las acciones de esta operación.
+    // Use the shared audit service to record this operation.
     private final AuditService audit;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public OrderService(
             OrderRepository repository, InventoryService inventory, AuditService audit) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.repository = repository;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.inventory = inventory;
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.audit = audit;
     }
 
-    // Spring abre una lectura REPEATABLE_READ: cabecera y líneas ven una instantánea consistente.
+    // Spring opens a REPEATABLE_READ reading: header and lines see a consistent snapshot.
     @Transactional(
             readOnly = true,
             isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
-    // Recupera el DTO con datos generales y líneas del pedido.
+    // Recover the DTO with general data and order lines.
     public OrderDtos.Order get(long id) {
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Mantiene una visión consistente entre el conteo, las cabeceras y las líneas de esta página.
+    // It maintains a consistent vision between the count, the headers and the lines of this page.
     @Transactional(
             readOnly = true,
             isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public PageResponse<OrderDtos.Order> search(
             Long customerId, String status, int page, int size, String sort) {
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.search(customerId, status, page, size, sort);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Crear un pedido requiere un cliente; las líneas se añaden en operaciones posteriores.
+    // Creating an order requires a client; lines are added in later operations.
     public OrderDtos.Order create(OrderDtos.Create request) {
-        // Rechaza un cliente inexistente o inactivo antes de insertar el pedido.
+        // Reject a non-existing or inactive customer before inserting the order.
         repository.requireActiveCustomer(request.customerId());
-        // El repositorio inserta customer_id y devuelve el nuevo id del pedido, no el del cliente.
+        // Insert the customer_id and return the generated order ID.
         long id = repository.create(request.customerId());
-        // Añade la auditoría del alta dentro de la misma transacción.
+        // Record the creation in the audit log in the same transaction.
         audit.record(
                 "ORDER_CREATED", "ORDER", Long.toString(id), "Customer " + request.customerId());
-        // Vuelve a consultar el pedido creado para devolver su DTO con valores iniciales y líneas.
+        // Refer to the order created to return your DTO with initial values and lines.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public OrderDtos.Order update(long id, OrderDtos.Create request) {
-        // Bloquea la cabecera y exige DRAFT antes de cambiar el cliente.
+        // Block the header and require DRAFT before changing the customer.
         requireState(repository.header(id, true), "DRAFT");
-        // Verifica que el nuevo cliente exista y siga activo.
+        // Check that the new client exists and is still active.
         repository.requireActiveCustomer(request.customerId());
-        // Guarda la relación con el cliente; incrementa versión y fecha de actualización.
+        // Save the relationship with the customer; increase version and update date.
         repository.customer(id, request.customerId());
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record(
                 "ORDER_UPDATED", "ORDER", Long.toString(id), "Customer " + request.customerId());
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public OrderDtos.Order setLine(long id, long productId, OrderDtos.SetLine request) {
-        // Bloquea el pedido; solo los borradores permiten editar líneas.
+        // It blocks the order; only the erasers allow to edit lines.
         requireState(repository.header(id, true), "DRAFT");
-        // Comprueba que el producto esté activo y obtiene su precio actual.
+        // Check that the product is active and gets its current price.
         BigDecimal currentPrice = repository.activePrice(productId);
-        // Lee las líneas actuales para calcular los límites del pedido.
+        // Read the current lines to calculate the order limits.
         var lines = repository.lines(id);
-        // Busca si ese producto ya tiene línea; findFirst devuelve un Optional.
+        // Use findFirst to look up the existing line for this product.
         var existing = lines.stream().filter(line -> line.productId() == productId).findFirst();
-        // El límite afecta a productos distintos, no a la cantidad de unidades de una línea.
+        // The limit affects different products, not the amount of units in a line.
         if (existing.isEmpty() && lines.size() >= 100)
-            // 409 impide añadir una línea nueva cuando ya se alcanzó el máximo.
+            // 409 prevents the addition of a new line when the maximum is reached.
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "ORDER_LINE_LIMIT",
                     "An order supports at most 100 distinct products");
-        // Si la línea existe conserva su precio pactado; si es nueva usa el del catálogo.
+        // If the line exists it retains its agreed price; if it is new it uses the one in the catalogue.
         BigDecimal price = existing.map(OrderDtos.Line::unitPrice).orElse(currentPrice);
-        // Calcula el total sustituyendo la línea afectada, sin sumarla dos veces.
+        // Calculates the total by replacing the affected line, without adding it twice.
         BigDecimal newTotal =
                 lines.stream()
                         .filter(line -> line.productId() != productId)
                         .map(OrderDtos.Line::lineTotal)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .add(price.multiply(BigDecimal.valueOf(request.quantity())));
-        // Compara BigDecimal para evitar superar el importe que admite la aplicación.
+        // Compare BigDecimal to avoid exceeding the amount that the application supports.
         if (newTotal.compareTo(new BigDecimal("999999999999.99")) > 0)
-            // 400 informa que la nueva cantidad produciría un importe excesivo.
+            // 400 reports that the new amount would produce an excessive amount.
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "ORDER_AMOUNT_TOO_LARGE",
                     "Order amount exceeds supported maximum");
-        // Inserta o actualiza la línea y recalcula el total en la base de datos.
+        // Insert or update the line and recalculate the total in the database.
         repository.setLine(id, productId, request.quantity(), currentPrice);
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record(
                 "ORDER_LINE_SET",
                 "ORDER",
                 Long.toString(id),
                 "Product " + productId + ", quantity " + request.quantity());
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.j
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public OrderDtos.Order removeLine(long id, long productId) {
-        // Bloquea el pedido y comprueba que aún se pueda editar.
+        // Lock the order and check that it can still be edited.
         requireState(repository.header(id, true), "DRAFT");
-        // Borra la línea y recalcula el total; si no existe lanza 404.
+        // Delete the line and recalculate the total; if there is no spear 404.
         repository.removeLine(id, productId);
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("ORDER_LINE_REMOVED", "ORDER", Long.toString(id), "Product " + productId);
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Confirma el borrador y reserva todas sus líneas como una sola transacción.
+    // Confirm the draft and book all its lines as a single transaction.
     public OrderDtos.Order confirm(long id) {
-        // FOR UPDATE evita que otra operación cambie este pedido mientras se confirma.
+        // FOR UPDATE prevents another operation from changing this order while it is confirmed.
         var order = repository.header(id, true);
-        // Un pedido ya confirmado, completado o cancelado no puede confirmarse otra vez.
+        // An order already confirmed, completed or cancelled cannot be confirmed again.
         requireState(order, "DRAFT");
-        // Vuelve a validar al cliente porque pudo desactivarse después del alta.
+        // Check the customer again in case the account was deactivated after the order was created.
         repository.requireActiveCustomer(order.customerId());
-        // Obtiene las líneas ordenadas por producto para bloquear inventario en un orden estable.
+        // Get the product-ordered lines to block inventory in a stable order.
         var lines = repository.lines(id);
-        // No se puede confirmar un pedido sin productos.
+        // You can't confirm an order without products.
         if (lines.isEmpty())
             throw new BusinessException(
                     HttpStatus.CONFLICT, "EMPTY_ORDER", "An order must contain at least one line");
-        // Procesa cada línea en orden de productId para reducir bloqueos en orden contrario.
+        // Process each line in order of productId to reduce blocks in order to the contrary.
         for (var line : lines) {
-            // Verifica disponibilidad del producto en catálogo sin cambiar su precio pactado.
+            // Check availability of the product in a catalog without changing its agreed price.
             repository.activePrice(line.productId());
-            // Se une a esta transacción mediante MANDATORY; si una línea falla, se deshacen todas.
+            // It binds to this transaction using MANDATORY; if a line fails, all are undone.
             inventory.reserve(id, line.productId(), line.quantity());
         }
-        // Solo cambia a CONFIRMED después de reservar todas las líneas.
+        // Just change to CONFIRMED after booking all the lines.
         repository.transition(id, "CONFIRMED", null, null);
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record(
                 "ORDER_CONFIRMED",
                 "ORDER",
                 Long.toString(id),
                 "Reserved " + lines.size() + " product(s)");
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Cancela un borrador o un confirmado; no borra el pedido del historial.
+    // Cancel a draft or a confirmed one; do not delete the request from the history.
     public OrderDtos.Order cancel(long id) {
-        // Lee el estado bajo bloqueo para que la decisión no compita con una finalización.
+        // Lock the order before checking its status so completion cannot run concurrently.
         var order = repository.header(id, true);
-        // Los pedidos completados o cancelados no admiten esta transición.
+        // The completed or cancelled orders do not support this transition.
         if (!List.of("DRAFT", "CONFIRMED").contains(order.status()))
-            // Devuelve un conflicto de estado sin continuar con las reservas.
+            // It returns a conflict of state without continuing with reservations.
             throw transitionError(order.status(), "CANCELLED");
-        // Solo los confirmados tienen reservas que liberar.
+        // Only the confirmed have reservations to release.
         if (order.status().equals("CONFIRMED"))
-            // Recorre los productos del pedido en el orden estable del repositorio.
+            // Check the order products in the stable order of the repository.
             for (var line : repository.lines(id))
-                // false libera reservado sin restar existencias físicas, porque no se ha enviado nada.
+                // False frees reserved without subtracting physical stocks, because nothing has been sent.
                 inventory.release(id, line.productId(), line.quantity(), false);
-        // Guarda CANCELLED después de liberar las reservas que correspondían.
+        // Save CANCELLED after releasing the corresponding reserves.
         repository.transition(id, "CANCELLED", null, null);
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record("ORDER_CANCELLED", "ORDER", Long.toString(id), "Reservations released");
-        // Devuelve los datos obtenidos por el repositorio; la consulta y el mapeo están en esa capa.
+        // The repository runs the query and maps the result.
         return repository.get(id);
     }
 
-    // Al entrar por el proxy, Spring abre o comparte transacción; confirma al terminar y revierte ante errores no
-    // comprobados.
+    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
+    // back on unchecked exceptions.
     @Transactional
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Recibe la versión leída antes de shipping para detectar cambios durante la llamada HTTP.
+    // Receive the read version before shipping to detect changes during the HTTP call.
     public OrderDtos.Order complete(long id, long expectedVersion, ShippingClient.Quote quote) {
-        // Abre el tramo protegido leyendo la cabecera con FOR UPDATE.
+        // Open the protected section by reading the header with FOR UPDATE.
         var order = repository.header(id, true);
-        // Revalida CONFIRMED: la foto anterior ya podría estar desactualizada.
+        // The previous photo could already be out of date.
         requireState(order, "CONFIRMED");
-        // Compara la versión actual con la que se usó para pedir la cotización.
+        // Compare the current version with which it was used to request the quote.
         if (order.version() != expectedVersion)
-            // 409 evita aplicar una cotización sobre un pedido que cambió mientras se esperaba.
+            // 409 avoids applying a quote on an order that changed while expected.
             throw new BusinessException(
                     HttpStatus.CONFLICT,
                     "ORDER_CHANGED",
                     "Order changed while shipping was being quoted; reload and retry");
-        // Consume las reservas de cada línea dentro de esta misma transacción.
+        // Consume the reservations of each line within this same transaction.
         for (var line : repository.lines(id))
-            // true descuenta tanto reservado como físico, porque ahora el pedido sale.
+            // true discounts both reserved and physical, because now the order comes out.
             inventory.release(id, line.productId(), line.quantity(), true);
-        // Guarda COMPLETED y los datos de shipping solo tras consumir todas las líneas.
+        // Save COMPLETED and shipping data only after consuming all lines.
         repository.transition(id, "COMPLETED", quote.reference(), quote.cost());
-        // Registra la acción junto con los cambios; si la transacción se revierte, también se deshace su auditoría.
+        // Write the audit event in the same transaction as the change. Both roll back together.
         audit.record(
                 "ORDER_COMPLETED",
                 "ORDER",
                 Long.toString(id),
                 "Shipping quote " + quote.reference());
-        // Devuelve el pedido actualizado; Spring confirma al salir correctamente por su proxy.
+        // Returns the updated order; Spring confirms when you leave correctly by your proxy.
         return repository.get(id);
     }
 
-    // Regla reutilizable que compara el estado actual con el requerido.
+    // Reusable rule that compares the current status to the required.
     public static void requireState(OrderRepository.Header order, String expected) {
-        // Si no coincide, interrumpe la operación antes de que siga modificando datos.
+        // If it does not match, stop the operation before it continues to modify data.
         if (!order.status().equals(expected)) throw transitionError(order.status(), expected);
     }
 
-    // Construye el error; el llamador decide lanzarlo y el handler construye la respuesta HTTP.
+    // It builds the error; the caller decides to launch it and the handler builds the HTTP response.
     private static BusinessException transitionError(String state, String target) {
         return new BusinessException(
                 HttpStatus.CONFLICT,

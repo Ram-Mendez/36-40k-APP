@@ -3,7 +3,7 @@
 h1 { font-size: clamp(26px, 2.1vw, 37px); font-weight: 550; letter-spacing: -1.55px; line-height: 1.3; }
 h1 > span:not(.title-dot) { color: #87917e; }
 .page-heading p { margin-top: 9px; color: var(--muted); font-size: 12px; }
-.title-dot { color: #8da56c; }
+.title-dot { color: var(--green); }
 .page-heading > .btn, .page-heading > .button-group { flex-shrink: 0; }
 .page-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 33px; padding: 23px 0; font-size: 9px; color: #8d968a; border-top: 1px solid var(--line); }
 .page-footer > span { display: flex; align-items: center; gap: 12px; }
@@ -20,15 +20,15 @@ h1 > span:not(.title-dot) { color: #87917e; }
 .btn:hover:not(:disabled) { background: #f0f3eb; box-shadow: 0 3px 8px #203e3008; transform: translateY(-1px); }
 .btn app-icon { width: 16px; height: 16px; }
 .btn.primary { background: var(--forest); border-color: var(--forest); color: white; box-shadow: 0 3px 6px #203e3012; }
-.btn.primary:hover:not(:disabled) { background: #34553b; }
+.btn.primary:hover:not(:disabled) { background: var(--green); }
 .btn.small { padding: 7px 11px; font-size: 10px; min-height: 32px; }
 .btn.full { width: 100%; }
 .button-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; padding: 7px; border-radius: 6px; color: #7c8879; }
 .icon-button:hover:not(:disabled) { background: #e9eee3; color: #263d2e; }
 .icon-button app-icon { width: 17px; height: 17px; }
-.text-link { display: inline-flex; align-items: center; gap: 8px; color: #4a694b; font-size: 11px; font-weight: 650; padding: 0; }
-.text-link:hover { color: #223e24; }
+.text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--green); font-size: 11px; font-weight: 650; padding: 0; }
+.text-link:hover { color: var(--forest); }
 .text-link app-icon { width: 15px; height: 15px; }
 .text-link.amber { color: var(--amber); }
 .text-link.danger { color: var(--danger); }
@@ -74,13 +74,13 @@ td small { display: block; color: #8e9789; font-size: 9px; margin-top: 4px; }
 .table-search { padding: 15px 20px; }
 .tabs { display: flex; align-items: center; gap: 6px; }
 .tabs button { font-size: 11px; padding: 7px 11px; border-radius: 6px; color: #8a9380; font-weight: 550; }
-.tabs button.active { background: #edf1e5; color: #47613a; }
+.tabs button.active { background: var(--lime); color: var(--forest); }
 .tabs button:hover { background: #f6f8f0; }
 .tabs button span, .count-chip { display: inline-block; background: #dfe7d3; padding: 1px 5px; font-size: 9px; border-radius: 4px; margin-left: 5px; }
 .search-input { display: flex; gap: 8px; align-items: center; color: #a3ab9a; border: 1px solid #e4e8dd; border-radius: 6px; padding: 8px 10px; background: #fff; max-width: 100%; }
 .search-input app-icon { width: 15px; height: 15px; }
 .search-input input { border: 0; outline: 0; width: 210px; min-width: 0; font-size: 11px; color: #3e5236; background: transparent; }
-.search-input:focus-within { border-color: #8ea56f; box-shadow: 0 0 0 2px #e9efdf; }
+.search-input:focus-within { border-color: var(--green); box-shadow: 0 0 0 2px #e9efdf; }
 input::placeholder { color: #9ba28f; }
 .pagination { border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 15px 20px; font-size: 10px; color: #8a9380; }
 .pagination > div { display: flex; gap: 8px; }
@@ -105,7 +105,7 @@ input::placeholder { color: #9ba28f; }
 .form-stack { display: grid; gap: 17px; }
 .form-stack label { display: grid; gap: 7px; font-size: 11px; color: #637259; font-weight: 600; }
 .form-stack input, .form-stack select, .form-stack textarea { border: 1px solid #e0e6d7; padding: 12px 13px; border-radius: 7px; width: 100%; background: #fbfcf8; color: #354a2d; outline: none; font-weight: 450; }
-.form-stack input:focus, .form-stack select:focus, .form-stack textarea:focus { border-color: #95b278; box-shadow: 0 0 0 3px #eef2e6; }
+.form-stack input:focus, .form-stack select:focus, .form-stack textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px #eef2e6; }
 .form-stack .btn { margin-top: 7px; padding: 13px; }
 .form-error { background: #fff2ed; color: #a4573d; border: 1px solid #eed7ca; border-radius: 7px; padding: 12px; font-size: 12px; }
 .operation-result { background: #f1f7e9; border-radius: 8px; padding: 14px; font-size: 11px; margin-top: 20px; color: #5b7747; }

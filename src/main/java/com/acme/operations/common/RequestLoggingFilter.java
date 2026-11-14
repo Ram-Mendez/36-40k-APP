@@ -16,48 +16,48 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-// Spring crea y gestiona este componente para poder inyectarlo donde se necesita.
+// Spring manages this component and injects it wherever needed.
 @Component
-// Se ejecuta con alta prioridad para preparar la trazabilidad antes del resto del flujo.
+// It runs with high priority to prepare traceability before the rest of the flow.
 @Order(Ordered.HIGHEST_PRECEDENCE)
-// OncePerRequestFilter proporciona la integración con la cadena de filtros de Spring.
+// OncePerQuestFilter provides integration with the Spring filter chain.
 public class RequestLoggingFilter extends OncePerRequestFilter {
-    // Logger asociado a esta clase para registrar diagnóstico en el servidor.
+    // Logger associated with this class to record diagnosis on the server.
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
-    // El compilador comprueba que este método implementa o sobrescribe el contrato heredado.
+    // The compiler checks that this method overrides the inherited declaration.
     @Override
-    // Spring llama a este método para envolver el procesamiento de la petición.
+    // Spring calls this method to wrap the request processing.
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        // Lee el identificador que el cliente pudo enviar para correlacionar la petición.
+        // Read the identifier the client could send to correlate the request.
         String candidate = request.getHeader("X-Request-ID");
-        // Reutiliza solo un formato limitado; si no es válido, genera un UUID nuevo.
+        // It reuses only a limited format; if it is not valid, it generates a new UUID.
         String id =
                 candidate != null && candidate.matches("[A-Za-z0-9_-]{1,64}")
                         ? candidate
                         : UUID.randomUUID().toString();
-        // Guarda el id en el contexto de logs del hilo actual.
+        // Save the id in the context of the current thread log.
         MDC.put("requestId", id);
-        // Devuelve ese mismo id al cliente en una cabecera.
+        // Return that same go to the client in a header.
         response.setHeader("X-Request-ID", id);
-        // Mide duración con reloj monotónico, adecuado para calcular tiempo transcurrido.
+        // It measures duration with monotonic watch, suitable for calculating time elapsed.
         long start = System.nanoTime();
-        // finally garantiza la limpieza del contexto aunque otro filtro o controlador falle.
+        // Finally, it guarantees the cleaning of the context even if another filter or controller fails.
         try {
-            // Entrega la petición al siguiente filtro; sin esta llamada no llegaría al controlador.
+            // Deliver the request to the next filter; without this call it would not reach the controller.
             chain.doFilter(request, response);
-        // Al regresar del resto de la cadena se registran datos y se limpia el hilo.
+        // On returning from the rest of the chain data are recorded and the thread is cleaned.
         } finally {
-            // Escribe método, ruta, estado y duración en milisegundos.
+            // Write method, route, status and duration in milliseconds.
             log.info(
                     "http method={} path={} status={} durationMs={}",
                     request.getMethod(),
                     request.getRequestURI(),
                     response.getStatus(),
                     (System.nanoTime() - start) / 1_000_000);
-            // Evita que otra petición que reutilice este hilo herede el requestId anterior.
+            // Clear the requestId so that the next request on this thread cannot inherit it.
             MDC.remove("requestId");
         }
     }

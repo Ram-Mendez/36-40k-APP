@@ -4,12 +4,12 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-// Contenedor genérico: T es el tipo de cada elemento, acompañado de metadatos de paginación.
+// Generic Container: T is the type of each element, accompanied by pagination metadata.
 public record PageResponse<T>(
         List<T> content, int page, int size, long totalElements, int totalPages) {
-    // Adapta una Page de Spring Data al formato JSON común de esta API.
+    // Adapts a Spring Data Page to the common JSON format of this API.
     public static <T> PageResponse<T> from(Page<T> result) {
-        // Copia contenido, índice de página, tamaño y totales calculados por la consulta.
+        // Copy content, page index, size and totals calculated by the query.
         return new PageResponse<>(
                 result.getContent(),
                 result.getNumber(),

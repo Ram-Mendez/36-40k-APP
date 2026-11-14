@@ -1,5 +1,8 @@
 package com.acme.operations.common;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,88 +14,90 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Set;
 
-// Spring atiende las rutas de esta clase y serializa los valores devueltos como JSON.
+// Spring handles requests to these routes and serializes the response as JSON.
+@Tag(name = "Audit")
 @RestController
-// Prefijo común de las rutas; se combina con el mapping de cada método.
+// Each method path is relative to this base path.
 @RequestMapping("/api/v1/audit")
-// Spring Security exige ADMIN al entrar por el proxy antes de ejecutar esta operación.
+// Spring Security checks for the ADMIN role before running this operation.
 @PreAuthorize("hasRole('ADMIN')")
 public class AuditController {
-    // JdbcTemplate ejecuta nuestro SQL y adapta filas; no decide las reglas de negocio.
+    // JdbcTemplate executes the SQL and maps the result rows.
     private final JdbcTemplate jdbc;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public AuditController(JdbcTemplate jdbc) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.jdbc = jdbc;
     }
 
-    // DTO de salida del historial: quién hizo qué, sobre qué recurso y en qué petición.
+    // DTO from the history: who did what, on which resource and on which request.
     public record AuditView(
-            // Identificador propio de este registro, distinto de las referencias a cliente o producto.
+            // Unique ID of this record.
             long id,
-            // Identidad que ejecutó la acción auditada.
+            // Identity that executed the audited action.
             String actor,
-            // Código de la acción que quedó registrada.
+            // Code of action that was registered.
             String action,
-            // Tipo de recurso afectado, por ejemplo ORDER o USER.
+            // Type of resource concerned, e.g. ORDER or USER.
             String entityType,
-            // Identificador del recurso afectado, guardado como texto.
+            // Identifier of the resource concerned, stored as text.
             String entityId,
-            // Descripción de la acción para seguir el historial.
+            // Description of the action to follow the history.
             String details,
-            // Identificador que conecta este evento con los logs de la petición.
+            // Identifier that connects this event to the request logs.
             String requestId,
-            // Instante en que se creó el registro.
+            // Record creation time.
             OffsetDateTime createdAt) {}
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "List audit events")
     @GetMapping
-    // Consulta una página con los filtros recibidos; no crea ni modifica registros.
+    // Read one page of results using the supplied filters.
     public PageResponse<AuditView> list(
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") int size,
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) String entityType,
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) String entityId,
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) String requestId) {
-        // Reutiliza la validación de límites; esta consulta JDBC construye su propia paginación.
+        // It reuses the validation of limits; this JDBC query builds its own pagination.
         PageRequests.of(page, size, "id", "desc", Set.of("id"));
-        // Inicia un filtro siempre verdadero para poder añadir condiciones AND opcionales.
+        // It starts an always true filter to be able to add optional AND conditions.
         StringBuilder filter = new StringBuilder(" WHERE true");
-        // Guarda los valores para sustituir los ? sin concatenarlos dentro del SQL.
+        // Bind the values to the SQL placeholders.
         var args = new ArrayList<Object>();
-        // Filtra por tipo de recurso solo si la petición lo indica.
+        // Filter by type of appeal only if the request so indicates.
         if (entityType != null) {
             filter.append(" AND entity_type=?");
             args.add(entityType);
         }
-        // Permite localizar las acciones sobre un id concreto.
+        // It allows to locate the actions on a particular id.
         if (entityId != null) {
             filter.append(" AND entity_id=?");
             args.add(entityId);
         }
-        // Permite seguir todas las acciones de una misma petición.
+        // It allows to follow all actions of the same request.
         if (requestId != null) {
             filter.append(" AND request_id=?");
             args.add(requestId);
         }
-        // Cuenta coincidencias antes de añadir parámetros de paginación.
+        // It counts coincidences before adding pagation parameters.
         long total =
                 jdbc.queryForObject(
                         "SELECT count(*) FROM audit_event" + filter, Long.class, args.toArray());
-        // LIMIT recibe size y OFFSET page*size; la primera página es cero.
+        // LIMIT receives size and OFSET page * size; the first page is zero.
         args.add(size);
         args.add((long) page * size);
-        // Consulta los eventos más recientes y transforma cada fila en AuditView.
+        // Check out the latest events and transform each row into AuditView.
         var rows =
                 jdbc.query(
                         "SELECT * FROM audit_event" + filter + " ORDER BY id DESC LIMIT ? OFFSET ?",
-                        // El mapper lee columnas por nombre para separar el SQL del DTO de respuesta.
+                        // The mapper reads columns per name to separate the SQL from the response DTO.
                         (rs, n) ->
                                 new AuditView(
                                         rs.getLong("id"),
@@ -104,7 +109,7 @@ public class AuditController {
                                         rs.getString("request_id"),
                                         rs.getObject("created_at", OffsetDateTime.class)),
                         args.toArray());
-        // Devuelve el historial y el número total de páginas.
+        // Returns the history and total number of pages.
         return new PageResponse<>(rows, page, size, total, (int) ((total + size - 1) / size));
     }
 }

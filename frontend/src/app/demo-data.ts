@@ -1,17 +1,17 @@
 import { Balance, Customer, Movement, Order, OrderStatus, Product, Reservation } from './operations.models';
 
-// Estos datos ilustrativos nunca se escriben en la API ni se mezclan con sus respuestas.
+// Sample data stays in the browser and is kept separate from API results.
 export function createDemoData() {
   const products: Product[] = [
-    { id: 1, sku: 'PKG-001', name: 'Caja kraft premium', unitPrice: 4.8, active: true, version: 1 },
-    { id: 2, sku: 'PAP-002', name: 'Papel de seda natural', unitPrice: 12.5, active: true, version: 0 },
-    { id: 3, sku: 'BAG-003', name: 'Bolsa de algodón', unitPrice: 8.9, active: true, version: 2 },
-    { id: 4, sku: 'LBL-004', name: 'Etiquetas personalizadas', unitPrice: 2.4, active: true, version: 0 },
-    { id: 5, sku: 'TAP-005', name: 'Cinta de papel reciclado', unitPrice: 6.2, active: true, version: 1 },
-    { id: 6, sku: 'ENV-006', name: 'Sobre acolchado', unitPrice: 3.5, active: true, version: 0 },
+    { id: 1, sku: 'PKG-001', name: 'Premium kraft box', unitPrice: 4.8, active: true, version: 1 },
+    { id: 2, sku: 'PAP-002', name: 'Natural tissue paper', unitPrice: 12.5, active: true, version: 0 },
+    { id: 3, sku: 'BAG-003', name: 'Cotton bag', unitPrice: 8.9, active: true, version: 2 },
+    { id: 4, sku: 'LBL-004', name: 'Custom labels', unitPrice: 2.4, active: true, version: 0 },
+    { id: 5, sku: 'TAP-005', name: 'Recycled paper tape', unitPrice: 6.2, active: true, version: 1 },
+    { id: 6, sku: 'ENV-006', name: 'Padded envelope', unitPrice: 3.5, active: true, version: 0 },
   ];
   const customers: Customer[] = ['Estudio Oliva', 'Casa Norte', 'Forma & Co.', 'Atelier Botánica', 'Marea Studio', 'Alma Market'].map((name, i) => ({
-    id: i + 1, name, taxId: `DEMO-${i + 1}`, email: `hola@${['oliva', 'casanorte', 'forma', 'botanica', 'marea', 'alma'][i]}.example`,
+    id: i + 1, name, taxId: `DEMO-${i + 1}`, email: `hello@${['oliva', 'casanorte', 'forma', 'botanica', 'marea', 'alma'][i]}.example`,
     address: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao', 'Málaga'][i], active: true, version: 0,
   }));
   const date = (days: number) => { const d = new Date(); d.setDate(d.getDate() - days); d.setHours(10, 20, 0, 0); return d.toISOString(); };
@@ -34,7 +34,7 @@ export function createDemoData() {
   });
   const movements: Movement[] = orders.filter(o => o.status !== 'DRAFT').flatMap(o => o.lines.map(l => ({
     id: o.id, productId: l.productId, orderId: o.id, kind: o.status === 'COMPLETED' ? 'SHIP' : o.status === 'CANCELLED' ? 'RELEASE' : 'RESERVE',
-    quantity: o.status === 'CONFIRMED' ? l.quantity : -l.quantity, reason: o.status === 'COMPLETED' ? 'Pedido completado' : o.status === 'CANCELLED' ? 'Pedido cancelado' : 'Pedido confirmado', createdAt: o.updatedAt,
+    quantity: o.status === 'CONFIRMED' ? l.quantity : -l.quantity, reason: o.status === 'COMPLETED' ? 'Order completed' : o.status === 'CANCELLED' ? 'Order cancelled' : 'Order confirmed', createdAt: o.updatedAt,
   })));
   return { products, customers, orders, balances, movements, reservations };
 }

@@ -1,0 +1,118 @@
+<section class="warehouse" aria-labelledby="warehouse-title">
+  <header class="wh-heading">
+    <div><span class="wh-eyebrow">NEXO · OPERACIONES EN MOVIMIENTO</span><h1 id="warehouse-title">Tu almacén, por dentro<span>.</span></h1><p>Cada petición tiene un lugar. Cada respuesta cuenta lo que ha pasado.</p></div>
+    <div class="wh-status" [class.demo]="data.demo()"><i></i>{{ data.demo() ? 'Datos de demostración' : data.loading() ? 'Actualizando datos' : data.error() ? 'Carga incompleta' : 'Conectado al backend' }}
+      @if (data.demo()) { <button type="button" (click)="connect.emit()">Conectar <app-icon name="arrow" /></button> }
+    </div>
+  </header>
+  @if (data.error()) { <p class="wh-alert" role="alert">{{ data.error() }}</p> }
+  <div class="wh-stats" aria-label="Existencias del almacén">
+    <div><app-icon name="inventory" /><span>Físicas<strong>{{ data.loading() ? '…' : format(totals().physical) }}</strong></span></div>
+    <div><app-icon name="lock" /><span>Reservadas<strong>{{ data.loading() ? '…' : format(totals().reserved) }}</strong></span></div>
+    <div><app-icon name="box" /><span>Disponibles<strong>{{ data.loading() ? '…' : format(totals().available) }}</strong></span></div>
+    <div><app-icon name="orders" /><span>Pedidos confirmados<strong>{{ data.loading() ? '…' : data.pending().length }}</strong></span></div>
+  </div>
+  <div class="wh-world">
+    <div class="wh-toolbar">
+      <span><i class="wh-dot"></i> Vista del almacén <small>{{ activity.pendingCount() }} peticiones en curso · {{ queued() }} en cola visual</small></span>
+      <div><button type="button" class="wh-button compact" (click)="runDemo()"><app-icon name="spark" /> Simular</button><button type="button" class="wh-button compact" [attr.aria-pressed]="paused()" (click)="paused.set(!paused())">{{ paused() ? 'Reanudar' : 'Pausar' }}</button><label>Velocidad <select [ngModel]="speed()" (ngModelChange)="speed.set(+$event)"><option [ngValue]="0.5">0,5×</option><option [ngValue]="1">1×</option><option [ngValue]="2">2×</option></select></label><label class="wh-check"><input type="checkbox" [ngModel]="reducedMotion()" (ngModelChange)="reducedMotion.set($event)"> Sin animación</label></div>
+    </div>
+    <div class="wh-map-scroll" tabindex="0" aria-label="Plano del almacén; desplaza horizontalmente en pantallas pequeñas">
+      <div class="wh-map">
+        <svg class="wh-plan" viewBox="0 0 1000 650" role="img" aria-labelledby="wh-map-title wh-map-desc">
+          <title id="wh-map-title">Almacén de ocho zonas con recorridos de operarios</title><desc id="wh-map-desc">Las personas recorren el pasillo central entre recepción, estanterías, preparación, expedición, pedidos, devoluciones, administración y control. Las cajas solo se transportan tras una respuesta correcta.</desc>
+          <defs><pattern id="wh-floor" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#dfe5df" stroke-width="1"/></pattern><filter id="wh-shadow" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="4" flood-color="#324839" flood-opacity=".13"/></filter></defs>
+          <rect x="8" y="16" width="984" height="620" rx="25" fill="#d3ddd2"/>
+          <rect x="8" y="8" width="984" height="620" rx="25" fill="#edf1e8"/>
+          <rect x="8" y="8" width="984" height="620" rx="25" fill="url(#wh-floor)"/>
+          <path d="M30 330H970" stroke="#d5ddd1" stroke-width="72"/><path d="M40 330H960" stroke="#f8faf4" stroke-width="2" stroke-dasharray="13 14"/>
+          <path d="m480 319 12 11-12 11m40-22 12 11-12 11" stroke="#a4b19f" stroke-width="3" fill="none"/>
+          @for (zone of zones; track zone.id) {
+            <g [attr.transform]="'translate(' + zone.x + ' ' + zone.y + ')'" [attr.data-zone]="zone.id" class="wh-room" [class.selected]="selectedZoneId() === zone.id">
+              <rect x="-106" y="-94" width="212" height="197" rx="13" class="room-shadow"/>
+              <rect x="-106" y="-101" width="212" height="197" rx="13" class="room-floor"/>
+              <path d="M-106-5V-88Q-106-101-93-101H93Q106-101 106-88V-5" class="room-wall" fill="none" stroke-width="8"/>
+              @switch (zone.id) {
+                @case ('receiving') {
+                  <g transform="translate(-81,-12)" filter="url(#wh-shadow)"><rect width="109" height="58" rx="5" fill="#91ada0"/><path d="M109 17h30l19 22v19h-49z" fill="#e8c476"/><path d="M116 23h20l12 15h-32z" fill="#637b84"/><rect x="8" y="7" width="92" height="44" rx="2" fill="#c9d8c7"/><circle cx="27" cy="61" r="10" fill="#4d5b53"/><circle cx="130" cy="61" r="10" fill="#4d5b53"/><circle cx="27" cy="61" r="4" fill="#dbe1d3"/><circle cx="130" cy="61" r="4" fill="#dbe1d3"/></g>
+                  <path d="M-72 77h142" stroke="#b6a57c" stroke-width="7"/>
+                }
+                @case ('stock') {
+                  @for (rack of racks; track rack) { <g [attr.transform]="'translate(' + rack + ' -20)'" filter="url(#wh-shadow)"><rect x="-4" y="-5" width="68" height="82" rx="2" fill="#677f75"/><rect width="60" height="72" fill="#d9e3ce"/>@for (crate of crates; track crate) { <g [attr.transform]="'translate(' + ((crate % 2) * 29 + 3) + ' ' + (floor(crate / 2) * 23 + 3) + ')'" ><rect width="24" height="18" rx="2" [attr.fill]="crate < 2 && totals().reserved > 0 ? '#9b83bd' : '#d7af67'"/><path d="M12 0v18" stroke="#f2dba8" stroke-width="4"/></g> }<path d="M-5 23h70M-5 48h70M-5 73h70" stroke="#527369" stroke-width="5"/></g> }
+                }
+                @case ('packing') {
+                  <g transform="translate(-78,19)" filter="url(#wh-shadow)"><rect width="156" height="42" rx="21" fill="#7d9388"/><rect x="7" y="7" width="142" height="28" rx="14" fill="#b4c3b0"/>@for (roller of rollers; track roller) { <path [attr.d]="'M' + (roller * 18 + 14) + ' 9v24'" stroke="#91a38e" stroke-width="4"/> }<path d="M24 42v17M130 42v17" stroke="#5b7466" stroke-width="8"/><rect x="51" y="-20" width="47" height="42" rx="3" fill="#ddba7c"/><path d="M74-20v42" stroke="#f2dbb1" stroke-width="9"/></g>
+                }
+                @case ('dispatch') {
+                  <path d="M-72-20h145v90H-72z" fill="#9eada0"/><path d="M-60-10H62V68H-60z" fill="#708478"/><path d="M-60 5H62M-60 21H62M-60 37H62M-60 53H62" stroke="#93a491" stroke-width="5"/><path d="M-76 78H76" stroke="#d8b865" stroke-width="9" stroke-dasharray="14 9"/><g transform="translate(-28,27)"><rect width="54" height="43" rx="3" fill="#dfbc7d"/><path d="M27 0v43" stroke="#f4dcae" stroke-width="8"/></g>
+                }
+                @case ('returns') {
+                  <g transform="translate(-75,-6)" filter="url(#wh-shadow)"><rect width="150" height="49" rx="5" fill="#c4ccb2"/><path d="M10 49v25M140 49v25" stroke="#85987b" stroke-width="8"/><rect x="15" y="-14" width="40" height="35" rx="3" fill="#9bb797"/><path d="m26 3 7 7 13-16" fill="none" stroke="#ecf4e1" stroke-width="4"/><rect x="92" y="-14" width="40" height="35" rx="3" fill="#c19183"/><path d="m103-3 17 16m0-16-17 16" stroke="#fae9da" stroke-width="3"/></g>
+                }
+                @default {
+                  <g transform="translate(-70,-5)" filter="url(#wh-shadow)"><rect x="5" y="8" width="132" height="45" rx="6" fill="#c8b58b"/><path d="M16 53v22M125 53v22" stroke="#9b9476" stroke-width="9"/><rect x="38" y="-23" width="55" height="38" rx="4" fill="#526c61"/><rect x="43" y="-18" width="45" height="27" rx="2" fill="#bed9c3"/><path d="M64 15v8m-15 2h31" stroke="#617669" stroke-width="5"/><rect x="101" y="22" width="22" height="16" rx="2" fill="#f0ebd6"/><path d="M105 27h14m-14 5h11" stroke="#b0b9a3" stroke-width="2"/></g>
+                }
+              }
+            </g>
+          }
+          @if (selectedActivity(); as selected) { <path [attr.d]="routePath(selected)" fill="none" [attr.stroke]="selected.state === 'error' ? '#c45757' : selected.demo ? '#9d79bd' : '#628fb1'" stroke-width="3" stroke-dasharray="7 8" opacity=".8"/> }
+          @if (!people().length) {
+            @for (staff of idleStaff; track staff.x + '-' + staff.y) {
+              <g [attr.transform]="'translate(' + staff.x + ' ' + staff.y + ')'" [style.color]="staff.color" aria-hidden="true"><ellipse cx="0" cy="2" rx="20" ry="8" fill="#354b3b" opacity=".18"/><path d="M-9-22V0M9-22V0M-20-40l-3 22M20-40l3 22" stroke="currentColor" stroke-width="11" stroke-linecap="round"/><rect x="-16" y="-48" width="32" height="34" rx="12" fill="currentColor"/><circle cx="0" cy="-60" r="18" fill="currentColor"/><path d="M-13-65q13-18 26 0v5h-26z" fill="#f5df91"/><path d="M-17-61h34" stroke="#e3c479" stroke-width="5" stroke-linecap="round"/></g>
+            }
+          }
+          @for (person of people(); track person.id) {
+            <g [attr.transform]="'translate(' + person.x + ' ' + person.y + ')'" [style.color]="personColor(person)">
+              <ellipse cx="0" cy="2" rx="20" ry="8" fill="#354b3b" opacity=".18"/>
+              <g [attr.transform]="'rotate(' + person.step + ' -6 -18)'" fill="currentColor"><rect x="-14" y="-22" width="11" height="27" rx="5"/></g><g [attr.transform]="'rotate(' + -person.step + ' 6 -18)'" fill="currentColor"><rect x="3" y="-22" width="11" height="27" rx="5"/></g>
+              <rect x="-16" y="-48" width="32" height="34" rx="12" fill="currentColor"/><rect x="-23" y="-44" width="11" height="29" rx="6" fill="currentColor" transform="rotate(13 -17 -40)"/><rect x="12" y="-44" width="11" height="29" rx="6" fill="currentColor" transform="rotate(-13 17 -40)"/>
+              <circle cx="0" cy="-60" r="18" fill="currentColor"/><path d="M-13-65q13-18 26 0v5h-26z" fill="#f5df91"/><path d="M-17-61h34" stroke="#e3c479" stroke-width="5" stroke-linecap="round"/>
+              @if (hasBoxes(person)) { <g transform="translate(-16,-34)"><rect width="32" height="27" rx="3" fill="#e0b773"/><path d="M16 0v27" stroke="#f4d9a9" stroke-width="6"/></g> }
+              @if (person.activity.state === 'pending') { <circle cx="23" cy="-72" r="11" fill="#f5eac8"/><path d="M23-79v8l5 3" stroke="#97723b" stroke-width="2" fill="none"/> }
+              @if (person.activity.state === 'error') { <circle cx="23" cy="-72" r="11" fill="#c45757"/><path d="M23-79v8m0 4v1" stroke="#fff" stroke-width="3"/> }
+            </g>
+          }
+        </svg>
+        @for (zone of zones; track zone.id) {
+          <button type="button" class="wh-zone" [class.selected]="selectedZoneId() === zone.id" [style.left.%]="zone.x / 10" [style.top.%]="(zone.y - 78) / 6.5" [attr.aria-pressed]="selectedZoneId() === zone.id" (click)="selectZone(zone.id)"><app-icon [name]="zone.icon" /><strong>{{ zone.name }}</strong><small>{{ zoneCount(zone.id) }}</small></button>
+        }
+      </div>
+    </div>
+    <div class="wh-map-caption"><span><i class="wh-key stock"></i> Mercancía <i class="wh-key reserve"></i> Reserva <i class="wh-key person"></i> Operario</span><span>Plano ilustrativo · las cajas no equivalen a una unidad</span></div>
+  </div>
+  <div class="wh-execution" aria-live="polite">
+    @if (selectedActivity(); as event) {
+      <span class="wh-event-icon" [class.error]="event.state === 'error'"><app-icon [name]="event.state === 'error' ? 'close' : event.state === 'pending' ? 'clock' : 'check'" /></span>
+      <div><div class="wh-event-title"><strong>{{ event.title }}</strong><span class="wh-badge" [class.demo]="event.demo">{{ event.demo ? 'Simulación' : requestLabel(event) }}</span>@if (event.replayed) { <span class="wh-badge">Ya registrada</span> }</div><p>{{ event.state === 'error' ? event.error : event.state === 'pending' ? 'Esperando confirmación del backend. No se mueve mercancía.' : event.effect }}</p><small>{{ event.actor }} · {{ zoneName(event.from) }} → {{ zoneName(event.to) }}</small></div>
+      @if (event.state !== 'pending') { <button type="button" class="wh-button compact" (click)="replay(event)">Repetir visualización</button> }
+    } @else { <app-icon name="activity" /><div><strong>El almacén está preparado</strong><p>Abre una operación o prueba una simulación para ver el recorrido.</p></div> }
+  </div>
+  <div class="wh-bottom">
+    <section class="wh-panel wh-inspector" aria-labelledby="wh-zone-title">
+      <div class="wh-panel-heading"><div><span class="wh-eyebrow">ZONA SELECCIONADA</span><h2 id="wh-zone-title">{{ selectedZone().name }}</h2></div><app-icon [name]="selectedZone().icon" /></div>
+      <span class="wh-role">{{ selectedZone().role }}</span><p>{{ selectedZone().description }}</p>
+      <label>Buscar operación en todos los endpoints<input type="search" placeholder="Pedido, recepción, factura…" [ngModel]="operationSearch()" (ngModelChange)="operationSearch.set($event); operationId.set('')"></label>
+      <label>Operación<select [ngModel]="chosenAction()?.id ?? ''" (ngModelChange)="operationId.set($event)">@for (option of availableActions(); track option.id) { <option [value]="option.id">{{ operationLabel(option.id, option.title) }}</option> } @empty { <option value="">No hay coincidencias</option> }</select></label>
+      @if (chosenAction(); as chosen) { <code>{{ chosen.method }}</code><button type="button" class="wh-button primary" (click)="runChosen()">Abrir operación <app-icon name="arrow" /></button> }
+      <button type="button" class="wh-link" (click)="openLab.emit()">Abrir laboratorio guiado <app-icon name="arrow" /></button>
+    </section>
+    <section class="wh-panel" aria-labelledby="wh-record-title">
+      <div class="wh-panel-heading"><div><span class="wh-eyebrow">{{ data.demo() ? 'REGISTROS DE EJEMPLO' : 'REGISTROS DEL BACKEND' }}</span><h2 id="wh-record-title">Pedido y mercancía</h2></div><app-icon name="layers" /></div>
+      <label>Pedido<select [ngModel]="selectedOrder()?.id ?? null" (ngModelChange)="selectedOrderId.set(+$event)">@for (order of data.orders(); track order.id) { <option [ngValue]="order.id">#{{ order.id }} · {{ order.customerName }} · {{ statusLabel(order.status) }}</option> } @empty { <option [ngValue]="null">Sin pedidos cargados</option> }</select></label>
+      @if (selectedOrder(); as order) { <div class="wh-order-summary"><span class="wh-badge">{{ statusLabel(order.status) }}</span><strong>{{ money(order.total) }}</strong><span>{{ order.lines.length }} productos</span></div><div class="wh-actions"><button type="button" class="wh-button compact" (click)="orderAction('order-get')">Consultar</button>@if (order.status === 'DRAFT') { <button type="button" class="wh-button compact" (click)="orderAction('order-confirm')">Reservar</button> } @if (order.status === 'CONFIRMED') { <button type="button" class="wh-button compact" (click)="orderAction('order-complete')">Despachar</button> } @if (order.status === 'DRAFT' || order.status === 'CONFIRMED') { <button type="button" class="wh-button compact" (click)="orderAction('order-cancel')">Cancelar</button> }</div> }
+      <label>Producto<select [ngModel]="selectedBalance()?.productId ?? null" (ngModelChange)="selectedProductId.set(+$event)">@for (balance of data.balances(); track balance.productId) { <option [ngValue]="balance.productId">{{ balance.sku }} · {{ balance.productName }}</option> } @empty { <option [ngValue]="null">Sin existencias cargadas</option> }</select></label>
+      @if (selectedBalance(); as balance) { <div class="wh-product-numbers"><span>Físicas<strong>{{ format(balance.onHand) }}</strong></span><span>Reservadas<strong>{{ format(balance.reserved) }}</strong></span><span>Disponibles<strong>{{ format(balance.available) }}</strong></span></div><div class="wh-actions"><button type="button" class="wh-button compact" (click)="productAction('adjust')">Ajustar</button><button type="button" class="wh-button compact" (click)="productAction('movements')">Movimientos</button></div> }
+      <button type="button" class="wh-link" (click)="openAction('order-create')"><app-icon name="plus" /> Crear pedido</button>
+    </section>
+    <section class="wh-panel wh-history" aria-labelledby="wh-history-title">
+      <div class="wh-panel-heading"><div><span class="wh-eyebrow">ESTA SESIÓN · {{ activity.activities().length }} PETICIONES</span><h2 id="wh-history-title">Qué está pasando</h2></div><button type="button" class="wh-link" (click)="clearHistory()" [disabled]="!activity.activities().length || activity.pendingCount() > 0">Limpiar</button></div>
+      <div class="wh-history-list">
+        @for (event of activity.activities(); track event.id) {
+          <button type="button" class="wh-history-item" [class.selected]="selectedActivity()?.id === event.id" (click)="selectedId.set(event.id); replay(event)"><span class="wh-history-dot" [class.error]="event.state === 'error'" [class.pending]="event.state === 'pending'" [class.demo]="event.demo"></span><span><strong>{{ event.title }}</strong><code>{{ event.method }} {{ event.path }}</code><small>{{ event.demo ? 'Simulación' : requestLabel(event) }} · {{ elapsed(event) }} @if (event.quantity !== null) { · {{ format(event.quantity) }} unidades }</small></span><app-icon [name]="event.state === 'pending' ? 'clock' : event.state === 'error' ? 'close' : 'check'" /></button>
+        } @empty { <div class="wh-empty"><app-icon name="activity" /><p>Las operaciones aparecerán aquí con su resultado y su recorrido.</p></div> }
+      </div>
+    </section>
+  </div>
+  <section class="wh-demo" aria-label="Simulaciones sin modificar el backend"><div><span class="wh-badge demo">SIMULADOR</span><strong>Explora antes de ejecutar</strong><p>Estas animaciones no llaman al backend ni cambian los registros.</p></div><label class="sr-only" for="wh-demo-operation">Operación de ejemplo</label><select id="wh-demo-operation" [ngModel]="demonstration()" (ngModelChange)="demonstration.set($event)"><option value="confirm">Reservar un pedido</option><option value="complete">Preparar y despachar</option><option value="receive">Recibir una compra</option><option value="return">Inspeccionar una devolución</option><option value="payment">Registrar un cobro</option><option value="error">Error: stock insuficiente</option></select><button type="button" class="wh-button" (click)="runDemo()"><app-icon name="spark" /> Simular recorrido</button></section>
+  <footer class="wh-footnote">Las cantidades vienen del backend o del conjunto de demostración indicado arriba. Los personajes y las ubicaciones son ilustrativos; no representan seguimiento físico en tiempo real. Repetir una visualización no repite la petición.</footer>
+</section>

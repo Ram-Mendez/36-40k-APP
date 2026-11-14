@@ -1,5 +1,8 @@
 package com.acme.operations.security;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -7,49 +10,53 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-// Spring atiende las rutas de esta clase y serializa los valores devueltos como JSON.
+// Spring handles requests to these routes and serializes the response as JSON.
+@Tag(name = "Authentication")
 @RestController
-// Prefijo común de las rutas; se combina con el mapping de cada método.
+// Each method path is relative to this base path.
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    // Servicio al que el controlador delega las reglas y operaciones de negocio.
+    // The controller delegates business operations to this service.
     private final AuthService service;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public AuthController(AuthService service) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.service = service;
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Sign in")
     @PostMapping("/login")
-    // Entrega credenciales al servicio y devuelve los tokens si son válidas. Spring convierte y valida el JSON antes
-    // de entrar.
+    // It delivers credentials to the service and returns the tokens if they are valid. Spring converts and
+    // validates the JSON before entering.
     public AuthDtos.Tokens login(@Valid @RequestBody AuthDtos.Login request) {
-        // Entrega credenciales al servicio y devuelve los tokens si son válidas.
+        // Deliver credentials to the service and return the tokens if valid.
         return service.login(request.username(), request.password());
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Refresh a session")
     @PostMapping("/refresh")
-    // Solicita rotación de tokens; el servicio valida la sesión y rechaza reutilizaciones. Spring convierte y valida
-    // el JSON antes de entrar.
+    // Refresh the tokens. The service checks the session and rejects token reuse.
     public AuthDtos.Tokens refresh(@Valid @RequestBody AuthDtos.Refresh request) {
-        // Solicita rotación de tokens; el servicio valida la sesión y rechaza reutilizaciones.
+        // Refresh the tokens. The service checks the session and rejects token reuse.
         return service.refresh(request.refreshToken());
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Sign out")
     @PostMapping("/logout")
-    // Si termina correctamente, Spring responde 204 sin cuerpo; las excepciones siguen su propio manejo.
+    // Return HTTP 204 with an empty body on success.
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    // Cierra la familia identificada por sid, obtenido del JWT autenticado.
+    // Close the family identified by Sid, obtained from the authenticated JWT.
     public void logout(@AuthenticationPrincipal Jwt jwt) {
-        // Cierra la familia identificada por sid, obtenido del JWT autenticado.
+        // Close the family identified by Sid, obtained from the authenticated JWT.
         service.logout(jwt.getClaimAsString("sid"));
     }
 
-    // Cambia la contraseña de la identidad autenticada y deja sin validez sus sesiones anteriores.
+    // Change the password of the authenticated identity and leave your previous sessions invalid.
+    @Operation(summary = "Change the current password")
     @PutMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(
@@ -58,14 +65,15 @@ public class AuthController {
         service.changePassword(jwt.getSubject(), request);
     }
 
-    // Actualiza el perfil del usuario autenticado.
+    // Update the authenticated user profile.
+    @Operation(summary = "Update the signed-in user profile")
     @PutMapping("/user")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateUser(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AuthDtos.UpdateUser request) {
 
-        // Utiliza la identidad del JWT, no la del body.
+        // It uses the JWT identity, not the body identity.
         service.updateUser(jwt.getSubject(), request);
     }
 }

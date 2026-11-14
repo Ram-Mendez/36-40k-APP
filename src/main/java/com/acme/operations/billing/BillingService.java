@@ -71,6 +71,7 @@ public class BillingService {
     }
 
     private BillingDtos.Entry settle(long id, String kind, BillingDtos.Settlement request) {
+        lock(id);
         var previous = repository.byRequest(id, request.requestId());
         if (previous.isPresent()) {
             var entry = previous.get();

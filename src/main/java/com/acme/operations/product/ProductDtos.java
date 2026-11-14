@@ -1,32 +1,34 @@
 package com.acme.operations.product;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
-// Agrupa DTO de entrada y salida; los records transportan datos y no consultan la base automáticamente.
+// These request and response records carry data between the API and the service.
 public final class ProductDtos {
-    // Constructor privado: esta clase agrupa tipos o utilidades y no necesita instancias.
+    // This class groups related types or utilities and does not need an instance.
     private ProductDtos() {}
 
-    // Entrada de alta o edición; @Valid en el controlador activa estas restricciones.
+    // The controller uses @Valid to validate create and update requests.
     public record Input(
-            // El SKU es obligatorio, admite < y >, y debe tener entre 2 y 64 caracteres.
+            // The SKU is mandatory, supports and supports, and must have between 2 and 64 characters.
             @NotBlank @Pattern(regexp = "[A-Za-z0-9_<>-]{2,64}") String sku,
-            // Exige un nombre no vacío de hasta 200 caracteres.
+            // It requires a non-empty name of up to 200 characters.
             @NotBlank @Size(max = 200) String name,
-            // El precio es obligatorio, positivo y compatible con doce enteros y dos decimales.
-            @NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal unitPrice,
-            // Puede omitirse al crear; al editar el servicio exige la versión actual.
-            @PositiveOrZero Long version) {}
+            // The price is mandatory, positive and compatible with twelve integers and two decimals.
+            @NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) @Schema(description = "Selling price in EUR per unit.") BigDecimal unitPrice,
+            // It can be omitted when creating; when editing the service requires the current version.
+            @PositiveOrZero @Schema(description = "Current record version used to detect concurrent changes.") Long version) {}
 
-    // Vista de salida: incluye id y versión generados o mantenidos por persistencia.
+    // Output view: includes id and version generated or maintained by persistence.
     public record View(
-            // Identificador propio de este registro, distinto de las referencias a cliente o producto.
-            long id, String sku, String name, BigDecimal unitPrice, boolean active, long version) {
-        // Convierte explícitamente la entidad en los datos que devolverá la API.
+            // Unique ID of this record.
+            long id, String sku, String name, @Schema(description = "Selling price in EUR per unit.") BigDecimal unitPrice, boolean active, @Schema(description = "Current record version used to detect concurrent changes.") long version) {
+        // explicitly convert the entity into the data that will return the API.
         public static View of(Product entity) {
-            // Copia campos, sin ejecutar una nueva consulta ni modificar el producto.
+            // Copies fields, not running a new consultation or modifying the product.
             return new View(
                     entity.getId(),
                     entity.getSku(),

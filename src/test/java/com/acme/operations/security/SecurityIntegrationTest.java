@@ -19,18 +19,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-// Prueba autenticación y permisos con Spring y la base PostgreSQL de integración.
+// Try authentication and permissions with Spring and the PostgreSQL integration base.
 class SecurityIntegrationTest extends AbstractIntegrationTest {
-    // Usa el firmador y verificador configurados por la aplicación para fabricar JWT de prueba.
+    // Use the firmer and verifier configured by the application to manufacture JWT test.
     @Autowired JwtEncoder encoder;
     @Autowired JwtDecoder decoder;
 
-    // Usuario inexistente y contraseña incorrecta deben recibir el mismo rechazo 401.
+    // Non-existing user and incorrect password must receive the same 401 rejection.
     @Test
     void wrongPasswordAndUnknownUserHaveSameUnauthorizedResponse() throws Exception {
-        // Repite el mismo intento con admin y con un nombre que no existe.
+        // Repeat the same attempt with admin and a name that does not exist.
         for (String username : new String[] {"admin", "nonexistent"}) {
-            // Envía una contraseña incorrecta por el endpoint real de login.
+            // Send a wrong password to the actual login endpoint.
             mvc.perform(
                             post("/api/v1/auth/login")
                                     .contentType(MediaType.APPLICATION_JSON)
@@ -41,31 +41,31 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                                             username,
                                                             "password",
                                                             "wrong-password"))))
-                    // Comprueba el estado y el mismo código INVALID_CREDENTIALS en ambos casos.
+                    // Check the status and same INVALID_CREDENTIALS code in both cases.
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
         }
     }
 
-    // Distingue no estar autenticado de estar autenticado sin permiso.
+    // Distinguish not to be authenticated from being authenticated without permission.
     @Test
     void authenticationAndOperationPermissionAreSeparate() throws Exception {
-        // Sin token espera 401; con READONLY espera 403 en la ruta de administración.
+        // No token awaits 401; with READONLY awaits 403 on the administration route.
         mvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + token("readonly")))
                 .andExpect(status().isForbidden());
-        // Con ADMIN la misma consulta debe funcionar y devolver una lista.
+        // With ADMIN the same consultation must work and return a list.
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + token("admin")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
     }
 
-    // Al rotar se invalida la sesión anterior; reutilizar el refresh revoca la familia.
+    // When rotating the previous session is invalidated; reuse the refresh revokes the family.
     @Test
     void tokenRotationRejectsOldAccessAndReplayRevokesSuccessor() throws Exception {
-        // Inicia sesión y conserva tanto el access token como el refresh originales.
+        // Login and keep both the original access token and the original refresh.
         var original = login("admin");
-        // Renueva con el refresh original y recoge el nuevo par de tokens.
+        // Renueva with the original refresh and collect the new pair of tokens.
         var rotated =
                 json(
                         mvc.perform(
@@ -82,21 +82,21 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 .andReturn()
                                 .getResponse()
                                 .getContentAsString());
-        // El access token anterior deja de ser aceptado tras la rotación.
+        // The above access token is no longer accepted after rotation.
         mvc.perform(
                         get("/api/v1/users")
                                 .header(
                                         "Authorization",
                                         "Bearer " + original.path("accessToken").asText()))
                 .andExpect(status().isUnauthorized());
-        // El access token recién emitido funciona antes de detectar una reutilización.
+        // The newly issued token access works before detecting a re-use.
         mvc.perform(
                         get("/api/v1/users")
                                 .header(
                                         "Authorization",
                                         "Bearer " + rotated.path("accessToken").asText()))
                 .andExpect(status().isOk());
-        // Reutiliza el refresh anterior: debe responder 401 con REFRESH_REPLAY.
+        // Reuse the above refresh: you must respond 401 with REFRESH_REPLAY.
         mvc.perform(
                         post("/api/v1/auth/refresh")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -107,14 +107,14 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                                         original.path("refreshToken").asText()))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_REPLAY"));
-        // Después del replay, la familia se revoca y el token sucesor también deja de funcionar.
+        // After the replay, the family is revoked and the successor token also stops working.
         mvc.perform(
                         get("/api/v1/users")
                                 .header(
                                         "Authorization",
                                         "Bearer " + rotated.path("accessToken").asText()))
                 .andExpect(status().isUnauthorized());
-        // Comprueba en PostgreSQL que la sesión del refresh sucesor fue revocada.
+        // He checks in PostgreSQL that the successor refresh session was revoked.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT revoked_at IS NOT NULL FROM auth_session WHERE"
@@ -122,7 +122,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 Boolean.class,
                                 AuthService.hash(rotated.path("refreshToken").asText())))
                 .isTrue();
-        // Comprueba que el evento de reutilización quedó auditado con el actor admin.
+        // It shows that the reuse event was audited with the admin actor.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT actor FROM audit_event WHERE action='REFRESH_REPLAY' ORDER"
@@ -131,49 +131,49 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo("admin");
     }
 
-    // Cerrar sesión invalida los tokens y la base conserva solo el hash del refresh.
+    // Close the invalid session of the tokens and the base only conserves the hash of the refresh.
     @Test
     void logoutRevokesBothTokensAndStoresOnlyRefreshHash() throws Exception {
-        // Inicia sesión y obtiene las credenciales que luego intentará usar.
+        // You log in and get the credentials you will then try to use.
         var auth = login("admin");
-        // Confirma que el login quedó registrado en auditoría con el usuario correcto.
+        // It confirms that the login was registered in audit with the right user.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT actor FROM audit_event WHERE action='LOGIN' ORDER BY id"
                                     + " DESC LIMIT 1",
                                 String.class))
                 .isEqualTo("admin");
-        // Extrae el refresh para comparar su valor original con lo almacenado.
+        // Extract the refresh to compare its original value with what is stored.
         String refresh = auth.path("refreshToken").asText();
-        // El refresh en texto directo no debe aparecer como refresh_hash en la tabla.
+        // Check that refresh_hash does not contain the raw refresh token.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT count(*) FROM auth_session WHERE refresh_hash=?",
                                 Long.class,
                                 refresh))
                 .isZero();
-        // Al buscar por el hash sí debe encontrarse una sesión.
+        // When looking for the hash, a session should be found.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT count(*) FROM auth_session WHERE refresh_hash=?",
                                 Long.class,
                                 AuthService.hash(refresh)))
                 .isEqualTo(1);
-        // Cierra la sesión usando el access token y espera 204.
+        // Close the session using the access token and wait 204.
         mvc.perform(
                         post("/api/v1/auth/logout")
                                 .header(
                                         "Authorization",
                                         "Bearer " + auth.path("accessToken").asText()))
                 .andExpect(status().isNoContent());
-        // El access token ya no debe permitir acceder tras logout.
+        // After logout, the access token must be rejected.
         mvc.perform(
                         get("/api/v1/users")
                                 .header(
                                         "Authorization",
                                         "Bearer " + auth.path("accessToken").asText()))
                 .andExpect(status().isUnauthorized());
-        // El refresh de la misma familia también debe ser rechazado.
+        // The refresh of the same family must also be rejected.
         mvc.perform(
                         post("/api/v1/auth/refresh")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -203,13 +203,13 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    // Un JWT vencido y una sesión refresh vencida se rechazan aunque sean auténticos.
+    // A defeated JWT and a defeated cool session are rejected even if they are authentic.
     @Test
     void expiredSignedAccessTokenAndExpiredRefreshAreRejected() throws Exception {
-        // Obtiene una sesión válida para reutilizar su sid en el token de prueba.
+        // You get a valid session to reuse your Sid in the test token.
         var auth = login("admin");
         var original = decoder.decode(auth.path("accessToken").asText());
-        // Construye claims con fecha de expiración ya pasada.
+        // It builds claims with an expiry date already passed.
         var claims =
                 JwtClaimsSet.builder()
                         .issuer("business-operations")
@@ -218,21 +218,21 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .expiresAt(Instant.now().minusSeconds(60))
                         .claim("sid", original.getClaimAsString("sid"))
                         .build();
-        // Firma el JWT caducado con la clave de prueba; la firma válida no cambia su fecha.
+        // Sign the expired JWT with the test key; the valid signature does not change its date.
         String expired =
                 encoder.encode(
                                 JwtEncoderParameters.from(
                                         JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                         .getTokenValue();
-        // Comprueba que el acceso con ese JWT devuelva 401.
+        // Check that access with that JWT returns 401.
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + expired))
                 .andExpect(status().isUnauthorized());
-        // Fuerza en la base la caducidad de la sesión de refresh.
+        // Force at the base the expiry of the refresh session.
         jdbc.update(
                 "UPDATE auth_session SET expires_at=current_timestamp-interval '1 second' WHERE"
                     + " refresh_hash=?",
                 AuthService.hash(auth.path("refreshToken").asText()));
-        // Comprueba que tampoco se pueda renovar una sesión vencida.
+        // It shows that an expired session cannot be renewed either.
         mvc.perform(
                         post("/api/v1/auth/refresh")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -244,10 +244,10 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // Un JWT firmado con un claim sid de formato incorrecto también debe rechazarse.
+    // A JWT signed with an incorrect format claim Sid must also be rejected.
     @Test
     void signedTokenWithMalformedSessionClaimIsUnauthorized() throws Exception {
-        // Crea un token vigente pero pone una lista donde se espera el identificador UUID de sesión.
+        // It creates a valid token but sets a list where the session UUID identifier is expected.
         var claims =
                 JwtClaimsSet.builder()
                         .issuer("business-operations")
@@ -256,7 +256,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .expiresAt(Instant.now().plusSeconds(60))
                         .claim("sid", java.util.List.of("not", "a", "uuid"))
                         .build();
-        // Lo firma y comprueba que al usarlo la API devuelve 401.
+        // Sign it and check that when using the API, it returns 401.
         String malformed =
                 encoder.encode(
                                 JwtEncoderParameters.from(
@@ -266,33 +266,33 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // Un cambio de rol debe aplicarse al siguiente acceso y la baja debe invalidar sesiones.
+    // Check that the new role applies on the next request and that deactivation invalidates existing sessions.
     @Test
     void userRoleChangesTakeEffectImmediatelyAndDeactivationRevokesSessions() throws Exception {
-        // Crea un usuario OPERATIONS y obtiene un token suyo.
+        // Create an OPERATIONS user and get a token of it.
         String admin = token("admin");
         String username = unique("operator");
         long id = createUser(admin, username, "OPERATIONS");
         String access = token(username);
-        // Al principio no tiene permiso para listar usuarios.
+        // At first you have no permission to list users.
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + access))
                 .andExpect(status().isForbidden());
-        // Un administrador cambia su rol a ADMIN conservando la cuenta activa.
+        // An administrator changes his role to ADMIN by retaining the active account.
         mvc.perform(
                         put("/api/v1/users/" + id)
                                 .header("Authorization", "Bearer " + admin)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"role\":\"ADMIN\",\"active\":true}"))
                 .andExpect(status().isOk());
-        // Con el mismo token, la siguiente petición ya refleja el rol actual de la base.
+        // With the same token, the following request already reflects the current role of the base.
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + access))
                 .andExpect(status().isOk());
-        // Desactiva la cuenta; desde ese momento su token deja de autenticar.
+        // Disable the account; from that moment your token stops authenticating.
         mvc.perform(delete("/api/v1/users/" + id).header("Authorization", "Bearer " + admin))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/users").header("Authorization", "Bearer " + access))
                 .andExpect(status().isUnauthorized());
-        // Verifica en PostgreSQL la desactivación y comprueba que ya no pueda iniciar sesión.
+        // Check the deactivation in PostgreSQL and check that you can no longer log in.
         assertThat(jdbc.queryForObject("SELECT active FROM app_user WHERE id=?", Boolean.class, id))
                 .isFalse();
         mvc.perform(
@@ -308,13 +308,13 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // El administrador no puede quitarse su propio rol ni duplicar un nombre existente.
+    // The administrator cannot take away his own role or duplicate an existing name.
     @Test
     void cannotDemoteOwnAdminAndDuplicateUsernameIsConflict() throws Exception {
-        // Obtiene el token y el id de la cuenta admin.
+        // Get the token and the id from the admin account.
         String admin = token("admin");
         Long id = jdbc.queryForObject("SELECT id FROM app_user WHERE username='admin'", Long.class);
-        // Intenta cambiar su propio rol a READONLY y exige el conflicto SELF_ADMIN_CHANGE.
+        // He tries to change his own role to READONLY and demands the SELF_ADMIN_CHANGE conflict.
         mvc.perform(
                         put("/api/v1/users/" + id)
                                 .header("Authorization", "Bearer " + admin)
@@ -322,7 +322,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 .content("{\"role\":\"READONLY\",\"active\":true}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("SELF_ADMIN_CHANGE"));
-        // Intenta crear ADMIN en mayúsculas; la normalización debe impedir el duplicado.
+        // Try to create ADMIN in capital letters; normalization must prevent duplication.
         mvc.perform(
                         post("/api/v1/users")
                                 .header("Authorization", "Bearer " + admin)
@@ -330,17 +330,17 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 .content(
                                         "{\"username\":\"ADMIN\",\"password\":\"DevPassword123!\",\"role\":\"ADMIN\"}"))
                 .andExpect(status().isConflict());
-        // Verifica que el rol original sigue siendo ADMIN.
+        // He verifies that the original role remains ADMIN.
         assertThat(jdbc.queryForObject("SELECT role FROM app_user WHERE id=?", String.class, id))
                 .isEqualTo("ADMIN");
     }
 
-    // Un nombre inválido y una contraseña corta no deben crear un usuario.
+    // An invalid name and a short password should not create a user.
     @Test
     void invalidUserInputDoesNotInsertAnyUser() throws Exception {
-        // Guarda el total inicial de cuentas para comparar después del rechazo.
+        // Save the initial total of accounts to compare after rejection.
         long count = jdbc.queryForObject("SELECT count(*) FROM app_user", Long.class);
-        // Envía datos inválidos y espera respuesta 400.
+        // Send invalid data and wait for response 400.
         mvc.perform(
                         post("/api/v1/users")
                                 .header("Authorization", "Bearer " + token("admin"))
@@ -349,24 +349,24 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                         "{\"username\":\"bad"
                                             + " spaces\",\"password\":\"short\",\"role\":\"READONLY\"}"))
                 .andExpect(status().isBadRequest());
-        // Comprueba que el número de cuentas no haya cambiado.
+        // Check that the number of accounts has not changed.
         assertThat(jdbc.queryForObject("SELECT count(*) FROM app_user", Long.class))
                 .isEqualTo(count);
     }
 
-    // Cambiar contraseña exige la anterior y revoca todas las sesiones solo si tiene éxito.
+    // Changing password requires the previous one and revokes all sessions only if it is successful.
     @Test
     void passwordChangeChecksOldSecretThenRevokesEverySession() throws Exception {
-        // Crea un usuario y abre dos sesiones independientes para comprobar su revocación.
+        // Create a user and open two independent sessions to check its revocation.
         String username = unique("password");
         long id = createUser(token("admin"), username, "READONLY");
         var first = login(username);
         var second = login(username);
-        // Guarda el hash anterior para detectar si la contraseña llegó a modificarse.
+        // Save the previous hash to detect if the password was changed.
         String oldHash =
                 jdbc.queryForObject(
                         "SELECT password_hash FROM app_user WHERE id=?", String.class, id);
-        // Primero envía una contraseña actual incorrecta y espera 401.
+        // First send an incorrect current password and wait 401.
         mvc.perform(
                         put("/api/v1/auth/password")
                                 .header(
@@ -376,7 +376,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 .content(
                                         "{\"currentPassword\":\"incorrect\",\"newPassword\":\"ChangedPassword456!\"}"))
                 .andExpect(status().isUnauthorized());
-        // Verifica que el hash no cambió y las dos sesiones siguen activas.
+        // He verifies that the hash did not change and the two sessions are still active.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT password_hash FROM app_user WHERE id=?", String.class, id))
@@ -388,7 +388,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 Long.class,
                                 id))
                 .isEqualTo(2);
-        // Repite el cambio con la contraseña actual correcta y espera 204.
+        // Repeat the change with the correct current password and wait 204.
         mvc.perform(
                         put("/api/v1/auth/password")
                                 .header(
@@ -398,7 +398,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 .content(
                                         "{\"currentPassword\":\"DevPassword123!\",\"newPassword\":\"ChangedPassword456!\"}"))
                 .andExpect(status().isNoContent());
-        // Comprueba que cambió el hash y que ninguna sesión anterior queda activa.
+        // Check that the hash changed and that no previous session remains active.
         assertThat(
                         jdbc.queryForObject(
                                 "SELECT password_hash FROM app_user WHERE id=?", String.class, id))
@@ -410,7 +410,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                 Long.class,
                                 id))
                 .isZero();
-        // El segundo access token y su refresh ya no deben funcionar.
+        // The second access token and its refresh should no longer work.
         mvc.perform(
                         get("/api/v1/users")
                                 .header(
@@ -426,7 +426,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                                         "refreshToken",
                                                         second.path("refreshToken").asText()))))
                 .andExpect(status().isUnauthorized());
-        // La contraseña antigua deja de ser válida; la nueva permite volver a iniciar sesión.
+        // The old password is no longer valid; the new one allows you to log in again.
         mvc.perform(
                         post("/api/v1/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -451,19 +451,19 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    // Dos renovaciones simultáneas del mismo refresh solo permiten un éxito y detectan replay.
+    // Two simultaneous renovations of the same refresh only allow a success and detect replay.
     @Test
     void concurrentRefreshCanIssueOnlyOneSuccessorAndReplayRevokesIt() throws Exception {
-        // Inicia sesión y prepara un único cuerpo con el refresh compartido por ambos hilos.
+        // It starts session and prepares a single body with the refresh shared by both threads.
         var auth = login("admin");
         byte[] body =
                 mapper.writeValueAsBytes(
                         Map.of("refreshToken", auth.path("refreshToken").asText()));
-        // El latch mantendrá ambas tareas esperando hasta que la prueba las libere.
+        // The latch will keep both tasks waiting until the test releases them.
         var start = new CountDownLatch(1);
-        // Crea dos hilos para enviar las renovaciones en paralelo.
+        // Create two threads to send the renovations in parallel.
         try (var executor = Executors.newFixedThreadPool(2)) {
-            // La primera tarea espera la señal y envía el refresh.
+            // The first task awaits the signal and sends the refresh.
             var one =
                     executor.submit(
                             () -> {
@@ -474,7 +474,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                                         .content(body))
                                         .andReturn();
                             });
-            // La segunda tarea hace lo mismo con el mismo token.
+            // The second task does the same with the same token.
             var two =
                     executor.submit(
                             () -> {
@@ -485,14 +485,15 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                                         .content(body))
                                         .andReturn();
                             });
-            // Libera a ambas y espera sus respuestas, con un límite de 20 segundos.
+            // Release both and wait for your answers, with a limit of 20 seconds.
             start.countDown();
             var first = one.get(20, TimeUnit.SECONDS).getResponse();
             var second = two.get(20, TimeUnit.SECONDS).getResponse();
-            // Una debe responder 200 y la otra 401; no se predice cuál gana.
+            // One must respond 200 and the other 401; no one is predicted to win.
             assertThat(new int[] {first.getStatus(), second.getStatus()})
                     .containsExactlyInAnyOrder(200, 401);
-            // Recupera los tokens del intento exitoso y comprueba que el replay revocó también al sucesor.
+            // He recovers the tokens of the successful attempt and checks that the replay also revoked the
+            // successor.
             var successful = json((first.getStatus() == 200 ? first : second).getContentAsString());
             mvc.perform(
                             get("/api/v1/users")
@@ -500,7 +501,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                             "Authorization",
                                             "Bearer " + successful.path("accessToken").asText()))
                     .andExpect(status().isUnauthorized());
-            // Consulta la base para verificar que no quedaron sesiones activas en la familia.
+            // See the basis for verifying that there were no active sessions left in the family.
             Long active =
                     jdbc.queryForObject(
                             "SELECT count(*) FROM auth_session WHERE family_id=(SELECT family_id"
@@ -511,7 +512,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
-    // Ayudante: inicia sesión con la contraseña de los datos de prueba y devuelve el JSON.
+    // Assistant: log in with the test data password and return the JSON.
     private JsonNode login(String username) throws Exception {
         return json(
                 mvc.perform(
@@ -530,7 +531,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .getContentAsString());
     }
 
-    // Ayudante: crea un usuario con el rol indicado y devuelve su id para las pruebas.
+    // Helper: create a user with the indicated role and return your id for the tests.
     private long createUser(String admin, String username, String role) throws Exception {
         return json(mvc.perform(
                                 post("/api/v1/users")

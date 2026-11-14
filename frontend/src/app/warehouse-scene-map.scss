@@ -1,0 +1,29 @@
+.wh-world { background:#fff; border:1px solid var(--line); border-radius:18px; padding:18px; }
+.wh-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 3px 15px; }
+.wh-toolbar>span { font-size:12px; font-weight:650; }
+.wh-toolbar small { display:block; font-size:10px; color:#7c8878; font-weight:400; margin-top:3px; }
+.wh-dot { color:var(--green); margin-right:4px; }
+.wh-toolbar>div,.wh-toolbar label { display:flex; align-items:center; gap:9px; }
+.wh-toolbar label { font-size:10px; color:#75806d; }
+.wh-toolbar select { width:62px; padding:5px; }
+.wh-check input { width:14px; height:14px; accent-color:var(--green); }
+.wh-map-scroll { overflow-x:auto; scrollbar-width:thin; scrollbar-color:#bac8b7 transparent; border-radius:14px; }
+.wh-map { position:relative; width:100%; min-width:680px; aspect-ratio:1000/650; }
+.wh-plan { display:block; width:100%; height:100%; }
+.room-shadow { fill:#c5d0bf; }
+.room-floor { fill:#e6ebda; stroke:#d4ddc9; stroke-width:1; }
+.room-wall { stroke:#d0d9c3; }
+.wh-room[data-zone=receiving] .room-floor,.wh-room[data-zone=dispatch] .room-floor { fill:#e2e8dd; }
+.wh-room[data-zone=returns] .room-floor { fill:#e9e3d8; }
+.wh-room[data-zone=office] .room-floor,.wh-room[data-zone=control] .room-floor { fill:#e5e5d7; }
+.wh-room.selected .room-floor { fill:#e3efce; stroke:#7f9c64; stroke-width:2; }
+.wh-room.selected .room-wall { stroke:#a9c18d; }
+.wh-zone { position:absolute; transform:translateX(-50%); width:20%; display:grid; grid-template-columns:17px 1fr; column-gap:6px; align-items:center; padding:6px 8px; text-align:left; border-radius:6px; }
+.wh-zone:hover { background:#ffffff70; }
+.wh-zone.selected { color:#425e36; }
+.wh-zone app-icon { width:17px; height:17px; grid-row:1/3; }
+.wh-zone strong { font-size:clamp(11px,1.1vw,14px); letter-spacing:-.2px; }
+.wh-zone small { font-size:9px; color:#73816b; white-space:nowrap; }
+.wh-map-caption { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:13px 5px 1px; color:#7d8876; font-size:9px; }
+.wh-key { display:inline-block; width:8px; height:8px; border-radius:2px; margin:0 3px 0 12px; }
+.wh-key:first-child { margin-left:0; }.wh-key.stock { background:#d7af67; }.wh-key.reserve { background:#9b83bd; }.wh-key.person { background:#447bae; border-radius:50%; }

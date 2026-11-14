@@ -156,6 +156,28 @@ class ReplenishmentIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void rejectsInactiveReplacementAndAllowsKeepingAnInactiveSupplier() throws Exception {
+        long product = product(unique("SupplierChange"));
+        long supplierA = supplier();
+        long supplierB = supplier();
+        String endpoint = "/api/v1/replenishment/policies/{id}";
+        JsonNode original = call(put(endpoint, product), policy(5, 15, supplierA, true, null), 200);
+        long version = original.required("version").asLong();
+
+        call(delete("/api/v1/suppliers/{id}", supplierB), null, 204);
+        JsonNode error = call(put(endpoint, product), policy(6, 18, supplierB, true, version), 409);
+        assertThat(error.required("code").asText()).isEqualTo("SUPPLIER_UNAVAILABLE");
+        assertThat(call(get(endpoint, product), null, 200)).isEqualTo(original);
+
+        call(delete("/api/v1/suppliers/{id}", supplierA), null, 204);
+        JsonNode updated = call(put(endpoint, product), policy(6, 18, supplierA, true, version), 200);
+        assertThat(updated.required("preferredSupplierId").asLong()).isEqualTo(supplierA);
+        assertThat(updated.required("minimumStock").asLong()).isEqualTo(6);
+        assertThat(updated.required("targetStock").asLong()).isEqualTo(18);
+        assertThat(updated.required("version").asLong()).isEqualTo(version + 1);
+    }
+
+    @Test
     void inactiveAndMissingPreferredSuppliersAreVisibleWarningsWithoutAutomaticPurchases() throws Exception {
         long supplier = supplier();
         long product = product(unique("UnavailableSupplier"));

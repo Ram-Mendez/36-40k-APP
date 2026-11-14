@@ -25,139 +25,141 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
 public class AuthService {
-    // Ejecuta SQL parametrizado usando la conexión asociada a la transacción actual.
+    // Run parametered SQL using the connection associated with the current transaction.
     private final JdbcTemplate jdbc;
-    // Verifica y genera hashes de contraseña; nunca compara contraseñas guardadas en claro.
+    // Verify and generate password hashes; never compare passwords saved in clear.
     private final PasswordEncoder passwords;
-    // Firma los access tokens con la configuración JWT de Spring.
+    // Sign the tokens access with the Spring JWT configuration.
     private final JwtEncoder encoder;
-    // Delimita transacciones explícitas en las funciones execute y executeWithoutResult.
+    // Use execute and executeWithoutResult to define explicit transaction boundaries.
     private final TransactionTemplate transactions;
-    // Registra acciones de seguridad junto con los cambios de sesión.
+    // It records security actions along with session changes.
     private final AuditService audit;
-    // Duración del access token; determina expiresIn, expresado en segundos.
+    // Access time token; determines expiresIn, expressed in seconds.
     private final Duration accessTtl;
-    // Duración máxima de la familia de refresh tokens.
+    // Maximum duration of the refresh tokens family.
     private final Duration refreshTtl;
-    // Generador criptográfico para que el refresh token sea impredecible.
+    // Cryptographic generator for the refresh token to be unpredictable.
     private final SecureRandom random = new SecureRandom();
-    // Hash ficticio usado para verificar también cuando el usuario no existe.
+    // Fictional hash used to verify also when the user does not exist.
     private final String dummyHash;
 
-    // Spring inyecta colaboradores y duraciones en este único constructor.
+    // Spring injects collaborators and durations in this unique builder.
     public AuthService(
             JdbcTemplate jdbc,
             PasswordEncoder passwords,
             JwtEncoder encoder,
             TransactionTemplate transactions,
             AuditService audit,
-            // Spring lee las duraciones de configuración; PT15M y P7D son los valores por defecto.
+            // Spring reads the configuration durations; PT15M and P7D are the default values.
             @Value("${security.jwt.access-ttl:PT15M}") Duration accessTtl,
             @Value("${security.jwt.refresh-ttl:P7D}") Duration refreshTtl) {
-        // Guarda las dependencias recibidas; final impide reemplazar estas referencias después.
+        // Save the units received; end prevents the replacement of these references later.
         this.jdbc = jdbc;
-        // Conserva el codificador compartido de contraseñas.
+        // Keep the shared password encoder.
         this.passwords = passwords;
-        // Conserva el firmador de JWT configurado por Spring.
+        // Keep the JWT firmer set up by Spring.
         this.encoder = encoder;
-        // Conserva la plantilla que delimita las transacciones de autenticación.
+        // It retains the template that delimits the authentication transactions.
         this.transactions = transactions;
-        // Conserva la auditoría para registrar cambios dentro de la transacción.
+        // Keep the audit to record changes within the transaction.
         this.audit = audit;
-        // Guarda la duración de acceso y la duración máxima de renovación.
+        // Save the access duration and maximum renewal duration.
         this.accessTtl = accessTtl;
-        // Guarda cuánto puede durar una familia de refresh tokens.
+        // Save how long a family of refresh tokens can last.
         this.refreshTtl = refreshTtl;
-        // Las dos duraciones deben ser positivas para no emitir tokens ya caducados.
+        // The two durations must be positive not to issue already expired tokens.
         if (accessTtl.isNegative()
                 || accessTtl.isZero()
                 || refreshTtl.isNegative()
                 || refreshTtl.isZero()) {
-            // Una configuración inválida impide construir el servicio y arrancar correctamente.
+            // An invalid configuration prevents the service from being built and properly started.
             throw new IllegalArgumentException("Token lifetimes must be positive");
         }
-        // Prepara el hash ficticio una vez; reduce diferencias de tiempo al buscar usuarios inexistentes.
+        // Prepares the fictitious hash once; reduces time differences when looking for non-existent users.
         this.dummyHash = passwords.encode(UUID.randomUUID().toString());
     }
 
-    // Autentica las credenciales y crea una sesión persistida con sus tokens.
+    // Authors credentials and creates a persistent session with your tokens.
     public AuthDtos.Tokens login(String username, String password) {
-        // TransactionTemplate ejecuta este bloque en transacción; los errores de ejecución provocan rollback.
+        // TransactionTemplate executes this block in transaction; the execution errors cause rollback.
         return transactions.execute(
                 status -> {
-                    // Lee y bloquea el usuario para coordinar login con cambios administrativos de esa cuenta.
+                    // Lock the user row to coordinate login with administrative changes to the same account.
                     var users =
                             jdbc.query(
                                     "SELECT id,username,password_hash,active FROM app_user WHERE"
                                         + " username=? FOR UPDATE",
-                                    // El mapper construye LoginUser a partir de las columnas devueltas.
+                                    // The mapper builds LoginUser from the returned columns.
                                     (rs, n) ->
                                             new LoginUser(
                                                     rs.getLong("id"),
                                                     rs.getString("username"),
                                                     rs.getString("password_hash"),
                                                     rs.getBoolean("active")),
-                                    // Normaliza el nombre antes de asignarlo al ? del SQL.
+                                    // Normalize the name before assigning it to the SQL.
                                     username.toLowerCase(Locale.ROOT));
-                    // Representa un usuario ausente con null para verificar después sin revelar si existe.
+                    // It represents an absent user with null to check later without revealing if it exists.
                     var user = users.isEmpty() ? null : users.getFirst();
-                    // Guardará el resultado de la comparación de contraseña.
+                    // It will save the result of the password comparison.
                     boolean matches;
-                    // Convierte errores del codificador en credenciales rechazadas.
+                    // It turns coder errors into rejected credentials.
                     try {
-                        // Compara con el hash real o el ficticio; no descifra ninguna contraseña.
+                        // Compare with the actual hash or fictitious; do not unfigure any password.
                         matches =
                                 passwords.matches(password, user == null ? dummyHash : user.hash());
-                    // Un formato que el codificador no acepte también cuenta como contraseña incorrecta.
+                    // A format that the encoder does not accept also counts as the wrong password.
                     } catch (IllegalArgumentException exception) {
                         matches = false;
                     }
-                    // Rechaza usuario ausente, contraseña incorrecta o cuenta inactiva con el mismo error.
+                    // Discard absent user, incorrect password or inactive account with the same error.
                     if (user == null || !matches || !user.active())
                         throw unauthorized("INVALID_CREDENTIALS", "Invalid username or password");
-                    // Emite tokens para una familia nueva cuya caducidad se fija ahora.
+                    // Emite tokens for a new family whose expiry is now fixed.
                     var tokens =
                             issue(
                                     user.id(),
                                     user.username(),
                                     UUID.randomUUID(),
                                     Instant.now().plus(refreshTtl));
-                    // Audita el login con el usuario explícito porque todavía no hay identidad autenticada.
+                    // Use the supplied username in the login audit event because authentication has not
+                    // finished.
                     audit.recordAs(
                             user.username(),
                             "LOGIN",
                             "USER",
                             Long.toString(user.id()),
                             "Session created");
-                    // Devuelve los tokens; execute confirma la transacción antes de entregarlos al llamador.
+                    // Return the tokens; execute confirms the transaction before delivering them to the caller.
                     return tokens;
                 });
     }
 
-    // Rota un refresh token: invalida el anterior y entrega uno nuevo de la misma familia.
+    // Rot a refresh token: invalidate the previous one and deliver a new one from the same family.
     public AuthDtos.Tokens refresh(String token) {
-        // Devuelve el error como dato para confirmar la revocación antes de lanzar el 401 fuera del bloque.
+        // Returns the error as a data to confirm the revocation before throwing the 401 out of the block.
         var result =
                 transactions.execute(
                         status -> {
-                            // Localiza el usuario por el hash del token; la base no almacena el refresh token en claro.
+                            // Locates the user by the token hash; the base does not store the token refresh in
+                            // clear.
                             var userIds =
                                     jdbc.query(
                                             "SELECT user_id FROM auth_session WHERE refresh_hash=?",
                                             (rs, n) -> rs.getLong(1),
                                             hash(token));
-                            // Un token desconocido se rechaza sin crear una nueva sesión.
+                            // An unknown token is rejected without creating a new session.
                             if (userIds.isEmpty())
                                 return new RefreshResult(null, "INVALID_REFRESH_TOKEN");
-                            // Bloquea primero al usuario para mantener el mismo orden que las demás operaciones de sesión.
+                            // It blocks the user first to maintain the same order as other session operations.
                             jdbc.queryForObject(
                                     "SELECT id FROM app_user WHERE id=? FOR UPDATE",
                                     Long.class,
                                     userIds.getFirst());
-                            // Después bloquea la sesión y lee sus fechas y el estado del usuario.
+                            // Then block the session and read its dates and user status.
                             var sessions =
                                     jdbc.query(
                                             "SELECT"
@@ -165,7 +167,7 @@ public class AuthService {
                                                 + " FROM auth_session s JOIN app_user u ON"
                                                 + " u.id=s.user_id WHERE s.refresh_hash=? FOR"
                                                 + " UPDATE OF s",
-                                            // Convierte fechas y marcas de uso o revocación en el record Session.
+                                            // Convert dates and marks of use or revocation in the record Session.
                                             (rs, n) ->
                                                     new Session(
                                                             rs.getObject("id", UUID.class),
@@ -178,38 +180,39 @@ public class AuthService {
                                                             rs.getString("username"),
                                                             rs.getBoolean("active")),
                                             hash(token));
-                            // Si la sesión ya no aparece, devuelve el resultado de rechazo.
+                            // If the session no longer appears, return the rejection result.
                             if (sessions.isEmpty())
                                 return new RefreshResult(null, "INVALID_REFRESH_TOKEN");
-                            // Selecciona la sesión encontrada para decidir si aún puede rotarse.
+                            // Select the session found to decide if it can still be rotated.
                             var session = sessions.getFirst();
-                            // Un token usado otra vez indica replay: se invalida toda su familia.
+                            // A token used again indicates replay: his whole family is invalidated.
                             if (session.used()) {
-                                // La revocación también alcanza los tokens emitidos anteriormente en esa familia.
+                                // The revocation also reaches the tokens previously issued in that family.
                                 revokeFamily(session.familyId());
-                                // Registra la reutilización para que pueda investigarse en auditoría.
+                                // It registers the re-use so that it can be investigated in audit.
                                 audit.recordAs(
                                         session.username(),
                                         "REFRESH_REPLAY",
                                         "USER",
                                         Long.toString(session.userId()),
                                         "Session family revoked");
-                                // Sale del bloque sin lanzar todavía: así la revocación sí se confirma.
+                                // It leaves the block without yet to launch: so the revocation is confirmed.
                                 return new RefreshResult(null, "REFRESH_REPLAY");
                             }
-                            // Una sesión revocada, vencida o de usuario inactivo no puede renovarse.
+                            // A revoked, expired or inactive user session cannot be renewed.
                             if (session.revoked()
                                     || !session.active()
                                     || !session.expiresAt().isAfter(Instant.now())) {
                                 return new RefreshResult(null, "INVALID_REFRESH_TOKEN");
                             }
-                            // Marca el token actual como usado y revocado antes de emitir su sustituto.
+                            // Mark the current token as used and revoked before issuing your replacement.
                             jdbc.update(
                                     "UPDATE auth_session SET"
                                         + " used_at=current_timestamp,revoked_at=current_timestamp"
                                         + " WHERE id=?",
                                     session.id());
-                            // Emite la nueva sesión manteniendo familia y caducidad originales; no prolonga su vida máxima.
+                            // It emits the new session while maintaining original family and expiry; it does not
+                            // extend its maximum life.
                             return new RefreshResult(
                                     issue(
                                             session.userId(),
@@ -218,51 +221,51 @@ public class AuthService {
                                             session.expiresAt()),
                                     null);
                         });
-        // Ya fuera del bloque transaccional, transforma el resultado de rechazo en HTTP 401.
+        // Whether outside the transactional block, it transforms the rejection result into HTTP 401.
         if (result == null || result.error() != null)
             throw unauthorized(
                     result == null ? "INVALID_REFRESH_TOKEN" : result.error(),
                     "Refresh token rejected; sign in again");
-        // Entrega los tokens recién emitidos cuando la rotación terminó correctamente.
+        // It delivers the newly issued tokens when the rotation ended correctly.
         return result.tokens();
     }
 
-    // Spring exige que exista una identidad autenticada antes de entrar al método.
+    // Spring requires an authenticated identity before entering the method.
     @PreAuthorize("isAuthenticated()")
-    // Cierra la familia de sesiones a la que pertenece el JWT autenticado.
+    // Close the session family to which the authenticated JWT belongs.
     public void logout(String sessionId) {
-        // Agrupa bloqueo, revocación y auditoría en una transacción sin valor de retorno.
+        // Lock, revoke access and record the audit event in one transaction.
         transactions.executeWithoutResult(
                 status -> {
-                    // Obtiene el dueño de la sesión que llegó desde el principal JWT.
+                    // He gets the owner of the session that came from the main JWT.
                     var userId =
                             jdbc.queryForObject(
                                     "SELECT user_id FROM auth_session WHERE id=?",
                                     Long.class,
                                     UUID.fromString(sessionId));
-                    // Bloquea al usuario antes de mutar sus sesiones, igual que refresh y administración.
+                    // It blocks the user before mutating sessions, as well as refresh and administration.
                     jdbc.queryForObject(
                             "SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, userId);
-                    // Obtiene el identificador de la familia de sesiones.
+                    // He gets the ID from the session family.
                     var family =
                             jdbc.queryForObject(
                                     "SELECT family_id FROM auth_session WHERE id=?",
                                     UUID.class,
                                     UUID.fromString(sessionId));
-                    // Actualiza las sesiones asociadas y conserva su historial.
+                    // Update the associated sessions and keep your history.
                     jdbc.update(
                              "UPDATE auth_session SET revoked_at=coalesce(revoked_at,current_timestamp)"
                                  + " WHERE family_id=? AND used_at IS NULL",
                              family);
-                    // Deja registro del cierre dentro de la misma transacción.
+                    // Leave the closure record inside the same transaction.
                     audit.record("LOGOUT", "SESSION", sessionId, "Session family revoked");
                 });
     }
 
-    // Solo la cuenta autenticada puede cambiar su propia contraseña.
+    // Only the authenticated account can change your own password.
     @PreAuthorize("isAuthenticated() and #username == authentication.name")
     public void changePassword(String username, AuthDtos.ChangePassword request) {
-        // BCrypt admite como máximo 72 bytes, aunque el DTO ya limite el número de caracteres.
+        // BCrypt supports at most 72 bytes, although the DTO already limits the number of characters.
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
@@ -270,7 +273,7 @@ public class AuthService {
                     "Password exceeds 72 UTF-8 bytes");
         }
 
-        // El bloqueo coordina el cambio con login, refresh y las operaciones administrativas.
+        // The lock coordinates this change with sign-in, token refresh and administration.
         transactions.executeWithoutResult(
                 status -> {
                     var users =
@@ -301,7 +304,7 @@ public class AuthService {
                                 "INVALID_CREDENTIALS", "Current password is invalid");
                     }
 
-                    // Actualiza el hash y revoca todas las sesiones como una sola operación atómica.
+                    // It updates the hash and revokes all sessions as a single atomic operation.
                     jdbc.update(
                             "UPDATE app_user SET password_hash=? WHERE id=?",
                             passwords.encode(request.newPassword()),
@@ -322,7 +325,7 @@ public class AuthService {
     @PreAuthorize("isAuthenticated() and #username == authentication.name")
     public void updateUser(String username, AuthDtos.UpdateUser request) {
 
-        // BCrypt admite como máximo 72 bytes.
+        // BCrypt supports up to 72 bytes.
         if (request.newPassword()
                 .getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new BusinessException(
@@ -331,10 +334,10 @@ public class AuthService {
                     "Password exceeds 72 UTF-8 bytes");
         }
 
-        // Agrupa todos los cambios en una transacción.
+        // Group all changes in a transaction.
         transactions.executeWithoutResult(status -> {
 
-            // Bloquea la fila del usuario hasta terminar.
+            // Lock the user's row until you finish.
             var users = jdbc.query(
                     "SELECT id,username,password_hash,active " +
                             "FROM app_user WHERE username=? FOR UPDATE",
@@ -345,10 +348,10 @@ public class AuthService {
                             rs.getBoolean("active")),
                     username);
 
-            // Recupera el usuario encontrado.
+            // Recover the found user.
             var user = users.isEmpty() ? null : users.getFirst();
 
-            // Comprueba la contraseña actual.
+            // Check the current password.
             boolean matches;
             try {
                 matches = user != null
@@ -359,18 +362,18 @@ public class AuthService {
                 matches = false;
             }
 
-            // Rechaza el cambio si la contraseña no coincide.
+            // Reject the change if the password does not match.
             if (!matches) {
                 throw unauthorized(
                         "INVALID_CREDENTIALS",
                         "Current password is invalid");
             }
 
-            // Normaliza el nombre para guardarlo en minúsculas.
+            // Normalize the name to save in small cases.
             String newUsername =
                     request.username().toLowerCase(Locale.ROOT);
 
-            // Actualiza nombre y contraseña en una única operación.
+            // It updates name and password in a single operation.
             jdbc.update(
                     "UPDATE app_user " +
                             "SET username=?, password_hash=? WHERE id=?",
@@ -378,14 +381,14 @@ public class AuthService {
                     passwords.encode(request.newPassword()),
                     user.id());
 
-            // Invalida todas las sesiones anteriores.
+            // Invalid all previous meetings.
             jdbc.update(
                     "UPDATE auth_session " +
                             "SET revoked_at=coalesce(revoked_at,current_timestamp) " +
                             "WHERE user_id=?",
                     user.id());
 
-            // Audita el cambio sin registrar contraseñas.
+            // Audit the change without recording passwords.
             audit.record(
                     "USER_UPDATED",
                     "USER",
@@ -395,7 +398,7 @@ public class AuthService {
     }
 
 
-    // Revoca todas las sesiones de la familia conservando una fecha previa de revocación.
+    // It reviews all family sessions by retaining a previous date of revocation.
     private void revokeFamily(UUID familyId) {
         jdbc.update(
                 "UPDATE auth_session SET revoked_at=coalesce(revoked_at,current_timestamp) WHERE"
@@ -403,17 +406,17 @@ public class AuthService {
                 familyId);
     }
 
-    // Crea una sesión y los dos tokens; lo llaman bloques que ya tienen transacción.
+    // It creates a session and the two tokens; they call it blocks that already have a transaction.
     private AuthDtos.Tokens issue(
             long userId, String username, UUID family, Instant refreshExpiry) {
-        // Genera el id que vinculará el JWT con auth_session.
+        // Generates the id that will link the JWT to the auth_session.
         var sessionId = UUID.randomUUID();
-        // Reserva 48 bytes y los rellena con aleatoriedad criptográfica.
+        // Book 48 bytes and fill them with cryptographic randomness.
         var bytes = new byte[48];
         random.nextBytes(bytes);
-        // Codifica esos bytes como texto apto para URL, sin relleno Base64.
+        // It encodes these bytes as a URL-suitable text, without Base64 filling.
         var refresh = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        // Persiste la sesión y el hash del refresh; el token original solo se devuelve al cliente.
+        // The session and hash of the refresh persist; the original token is only returned to the customer.
         jdbc.update(
                 "INSERT INTO auth_session(id,user_id,family_id,refresh_hash,expires_at) VALUES"
                     + " (?,?,?,?,?)",
@@ -422,66 +425,66 @@ public class AuthService {
                 family,
                 hash(refresh),
                 Timestamp.from(refreshExpiry));
-        // Usa el mismo instante como referencia para emisión y caducidad del JWT.
+        // Use the same instant as reference for JWT issue and expiry.
         var now = Instant.now();
-        // Construye los claims: emisor, usuario, fechas, identificador y vínculo con la sesión.
+        // Build the claims: emitter, user, dates, identifier and link to the session.
         var claims =
                 JwtClaimsSet.builder()
                         .issuer("business-operations")
                         .subject(username)
                         .issuedAt(now)
                         .expiresAt(now.plus(accessTtl))
-                        // jti identifica el token; uid y sid enlazan con usuario y sesión.
+                        // jti identifies the token; uid and Sid link with user and session.
                         .id(UUID.randomUUID().toString())
                         .claim("uid", userId)
                         .claim("sid", sessionId.toString())
                         .build();
-        // El encoder firma los claims con HS256; firmar no equivale a cifrar el contenido.
+        // The encoder signs the claims with HS256; signing does not amount to encryption the content.
         var jwt =
                 encoder.encode(
                         JwtEncoderParameters.from(
                                 JwsHeader.with(MacAlgorithm.HS256).build(), claims));
-        // Devuelve access token, refresh token, esquema Bearer y duración del acceso en segundos.
+        // Return access token, refresh token, Bearer scheme and access duration in seconds.
         return new AuthDtos.Tokens(jwt.getTokenValue(), refresh, "Bearer", accessTtl.toSeconds());
     }
 
-    // Calcula un hash SHA-256 para buscar el refresh sin guardar su valor original.
+    // Calculate a SHA-256 hash to search for the refresh without saving its original value.
     static String hash(String value) {
-        // Gestiona la excepción del proveedor criptográfico, no un rechazo de credenciales.
+        // It manages the cryptographic supplier's exception, not a rejection of credentials.
         try {
-            // Convierte el resumen binario en hexadecimal para almacenarlo y compararlo.
+            // Turn the binary summary into hexadecimal to store and compare it.
             return HexFormat.of()
                     .formatHex(
                             MessageDigest.getInstance("SHA-256")
                                     .digest(value.getBytes(StandardCharsets.UTF_8)));
-        // Si SHA-256 no estuviera disponible, es un fallo interno de configuración o plataforma.
+        // If SHA-256 was not available, it is an internal configuration or platform failure.
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
     }
 
-    // Construye la excepción 401; ApiExceptionHandler la convierte después en respuesta HTTP.
+    // It builds the exception 401; ApiExceptionHandler then turns it into HTTP response.
     private static BusinessException unauthorized(String code, String detail) {
         return new BusinessException(HttpStatus.UNAUTHORIZED, code, detail);
     }
 
-    // Datos internos de login; el hash no se incluye en la respuesta de tokens.
+    // Internal login data; hash is not included in tokens response.
     private record LoginUser(long id, String username, String hash, boolean active) {}
 
-    // Foto de una sesión leída bajo bloqueo para decidir si puede renovarse.
+    // Use the locked session data to decide whether the token can be refreshed.
     private record Session(
-            // Identificadores de esta sesión, su familia de rotación y el usuario propietario.
+            // Identifiers of this session, your rotation family and the owner.
             UUID id,
             UUID familyId,
             long userId,
-            // Fecha límite y marcas que determinan si se permite renovar.
+            // Deadline and marks that determine whether to renew.
             Instant expiresAt,
             boolean revoked,
             boolean used,
-            // Identidad y estado actual del usuario asociado.
+            // Identity and current status of the associated user.
             String username,
             boolean active) {}
 
-    // Transporta tokens o un código de error fuera del bloque transaccional.
+    // It transports tokens or an error code outside the transactional block.
     private record RefreshResult(AuthDtos.Tokens tokens, String error) {}
 }

@@ -48,16 +48,16 @@ export class WorkspaceService {
       customerId: c.id, customerName: c.name, completedOrders: orders.length,
       netSales: orders.reduce((a, o) => a + o.total, 0), shippingCost: orders.reduce((a, o) => a + (o.shippingCost ?? 0), 0),
     }; }));
-    this.audit.set(d.movements.slice(0, 12).map(m => ({ id: m.id, actor: 'equipo.demo', action: m.kind,
+    this.audit.set(d.movements.slice(0, 12).map(m => ({ id: m.id, actor: 'demo.team', action: m.kind,
       entityType: 'ORDER', entityId: String(m.orderId), details: m.reason, requestId: `demo-${m.id}`, createdAt: m.createdAt })));
-    this.users.set([{ id: 1, username: 'equipo.demo', role: 'ADMIN', active: true, createdAt: new Date().toISOString() }]);
+    this.users.set([{ id: 1, username: 'demo.team', role: 'ADMIN', active: true, createdAt: new Date().toISOString() }]);
     this.syncedAt.set(null);
   }
 
   async load(): Promise<void> {
     const generation = ++this.generation;
     this.demo.set(false); this.loading.set(true); this.error.set(''); this.sectionErrors.set({});
-    // Al cambiar de origen se vacía la vista: nunca se presentan ejemplos como datos reales.
+    // Clear the demo data before loading live records.
     this.orders.set([]); this.products.set([]); this.customers.set([]); this.balances.set([]);
     this.movements.set([]); this.reservations.set([]); this.sales.set([]); this.audit.set([]); this.users.set([]);
     this.syncedAt.set(null);
@@ -71,7 +71,7 @@ export class WorkspaceService {
     ];
     const results = await Promise.allSettled(tasks);
     if (generation !== this.generation) return;
-    const names = ['Pedidos', 'Productos', 'Clientes', 'Inventario', 'Movimientos', 'Reservas'];
+    const names = ['Orders', 'Products', 'Customers', 'Inventory', 'Movements', 'Reservations'];
     const failures = results.flatMap((r, i) => r.status === 'rejected' ? [`${names[i]}: ${this.api.errorMessage(r.reason)}`] : []);
     if (failures.length) this.error.set(failures.join(' '));
     else this.syncedAt.set(new Date());

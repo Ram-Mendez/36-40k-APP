@@ -18,63 +18,63 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
-// Prueba el cliente con un pequeño servidor HTTP local, no con el transportista real.
+// Try the client with a small local HTTP server, not the actual carrier.
 class ShippingClientTest {
-    // Referencia al servidor de prueba para poder detenerlo al terminar cada caso.
+    // Reference to the test server to be able to stop it at the end of each case.
     private HttpServer server;
     private final AtomicReference<String> requestId = new AtomicReference<>();
     private final AtomicReference<String> query = new AtomicReference<>();
 
-    // Construye un servidor que devolverá el estado, cuerpo y demora indicados por el test.
+    // Build a server that will return the state, body and delay indicated by the test.
     private ShippingClient client(int status, String response, long delay) throws Exception {
-        // El sistema elige un puerto local disponible al usar el puerto 0.
+        // The system chooses a local port available when using port 0.
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        // Simula el endpoint /quotes que consulta ShippingClient.
+        // It simulates the endpoint / quotes that you consult ShippingClient.
         server.createContext(
                 "/quotes",
                 exchange -> {
                     requestId.set(exchange.getRequestHeaders().getFirst("X-Request-ID"));
                     query.set(exchange.getRequestURI().getRawQuery());
-                    // La demora permite provocar un timeout; el servidor espera solo si se le solicita.
+                    // The delay allows a timeout to be triggered; the server is only waiting if requested.
                     try {
                         if (delay > 0) Thread.sleep(delay);
-                    // Si se interrumpe, conserva la señal de interrupción del hilo.
+                    // If interrupted, keep the thread interruption signal.
                     } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
                     }
-                    // Convierte la respuesta preparada a bytes UTF-8 para enviarla por HTTP.
+                    // Convert the prepared response to UTF-8 bytes for HTTP.
                     byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
-                    // El cliente recibirá JSON con el código de estado indicado por cada caso.
+                    // The client will receive JSON with the status code indicated for each case.
                     exchange.getResponseHeaders().add("Content-Type", "application/json");
                     exchange.sendResponseHeaders(status, bytes.length);
-                    // Escribe y cierra el cuerpo de la respuesta.
+                    // Write and close the body of the answer.
                     try (var output = exchange.getResponseBody()) {
                         output.write(bytes);
                     }
                 });
-        // Arranca el simulador y crea el cliente apuntando al puerto asignado.
+        // Start the simulator and create the client by pointing to the assigned port.
         server.start();
         return new ShippingClient(
                 "http://127.0.0.1:" + server.getAddress().getPort(),
-                // Configura un segundo para conectar y 200 milisegundos para esperar la lectura.
+                // Set up a second to connect and 200 milliseconds to wait for reading.
                 Duration.ofSeconds(1),
                 Duration.ofMillis(200));
     }
 
-    // JUnit ejecuta esta limpieza después de cada prueba, incluso si falla.
+    // JUnit runs this cleaning after each test, even if it fails.
     @AfterEach
     void stopServer() {
-        // Detiene el servidor solo si llegó a crearse.
+        // It stops the server only if it came to be created.
         if (server != null) server.stop(0);
     }
 
-    // Una cotización válida debe conservar la referencia y el importe decimal.
+    // A valid contribution must keep the reference and the decimal amount.
     @Test
     void validQuotePreservesReferenceAndDecimalCost() throws Exception {
-        // Responde con 200 y una cotización conocida; quote realiza la llamada al servidor local.
+        // It responds with 200 and a known quote; quote makes the call to the local server.
         var quote =
                 client(200, "{\"reference\":\"C-123\",\"cost\":7.50}", 0).quote(1, BigDecimal.TEN);
-        // Comprueba los valores devueltos usando comparación decimal para el coste.
+        // Check the values returned using decimal comparison for cost.
         assertThat(quote.reference()).isEqualTo("C-123");
         assertThat(quote.cost()).isEqualByComparingTo("7.50");
         assertThat(query.get()).contains("orderId=1", "amount=10");
@@ -103,7 +103,7 @@ class ShippingClientTest {
         }
     }
 
-    // Repite el caso para JSON ausente, mal formado o con campos fuera de las reglas.
+    // Repeat the case for JSON absent, ill-formed or with fields outside the rules.
     @ParameterizedTest
     @ValueSource(
             strings = {
@@ -113,14 +113,14 @@ class ShippingClientTest {
                 "{\"reference\":\"\",\"cost\":2}",
                 "{\"reference\":\"x\",\"cost\":0.001}"
             })
-    // Comprueba que cada respuesta inválida se traduzca a BusinessException.
+    // Check that each invalid response is translated to BusinessException.
     void malformedOrInvalidQuotesBecomeBusinessUnavailable(String body) throws Exception {
         var client = client(200, body, 0);
         assertThatThrownBy(() -> client.quote(1, BigDecimal.TEN))
                 .isInstanceOf(BusinessException.class);
     }
 
-    // Una respuesta HTTP 503 del transportista debe traducirse a error de negocio.
+    // An HTTP 503 response from the carrier must be translated into business error.
     @Test
     void httpFailureBecomesBusinessUnavailable() throws Exception {
         var client = client(503, "{\"error\":\"maintenance\"}", 0);
@@ -128,14 +128,14 @@ class ShippingClientTest {
                 .isInstanceOf(BusinessException.class);
     }
 
-    // El cliente no debe esperar el segundo completo que tarda el servidor.
+    // The client should not wait for the full second that the server takes.
     @Test
     void slowCarrierIsBoundedByReadTimeout() throws Exception {
-        // Simula una respuesta válida pero demasiado lenta para el timeout de lectura de 200 ms.
+        // It simulates a valid but too slow response for the 200 m reading timeout.
         var client = client(200, "{\"reference\":\"late\",\"cost\":2}", 1000);
-        // Mide el tiempo transcurrido con un reloj apropiado para duraciones.
+        // It measures the time spent with a watch suitable for durations.
         long start = System.nanoTime();
-        // Exige el error de negocio y comprueba que la llamada termine antes de dos segundos.
+        // Demand business error and check that the call ends within two seconds.
         assertThatThrownBy(() -> client.quote(1, BigDecimal.TEN))
                 .isInstanceOf(BusinessException.class);
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));

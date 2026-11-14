@@ -69,7 +69,7 @@ public class ReturnService {
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ReturnDtos.View create(ReturnDtos.Create request) {
-        // El pedido es el bloqueo común a solicitudes de devolución y operaciones de cobro.
+        // Both return requests and invoice payments lock the same sales order.
         var order = orders.header(request.orderId(), true);
         var requested = sortedRequested(request.lines());
         String reason = request.reason().trim();
@@ -136,7 +136,7 @@ public class ReturnService {
         List<ReturnDtos.Line> lines = repository.lines(id);
         if (lines.size() != dispositions.size())
             throw invalid("RETURN_LINES_MISMATCH", "Supply a disposition for every return line exactly once");
-        // Valida todas las líneas antes de modificar saldos; el rollback cubre también errores de escritura.
+        // Valid all lines before modifying balances; the rollback also covers writing errors.
         for (int i = 0; i < lines.size(); i++) {
             var line = lines.get(i);
             var disposition = dispositions.get(i);
@@ -160,7 +160,7 @@ public class ReturnService {
             repository.disposition(id, disposition.productId(),
                     disposition.restockQuantity(), disposition.damagedQuantity());
         }
-        // El abono incluye unidades aceptadas dañadas; el transporte original no se devuelve.
+        // The credit includes accepted damaged units. The original shipping charge is not refunded.
         repository.receive(id, request.requestId(), fingerprint);
         audit.record("RETURN_RECEIVED", "RETURN", Long.toString(id),
                 "Order " + header.orderId() + "; credit " + header.creditAmount());

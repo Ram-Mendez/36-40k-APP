@@ -1,5 +1,8 @@
 package com.acme.operations.inventory;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.acme.operations.common.PageResponse;
 
 import jakarta.validation.Valid;
@@ -11,76 +14,80 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-// Spring atiende las rutas de esta clase y serializa los valores devueltos como JSON.
+// Spring handles requests to these routes and serializes the response as JSON.
+@Tag(name = "Inventory")
 @RestController
-// Prefijo común de las rutas; se combina con el mapping de cada método.
+// Each method path is relative to this base path.
 @RequestMapping("/api/v1/inventory")
-// Activa validación de restricciones en los parámetros de estos métodos.
+// Validate the constraints on method parameters.
 @Validated
-// Spring Security permite consultas a ADMIN, OPERATIONS y READONLY.
+// ADMIN, OPERATIONS and READONLY can read this resource.
 @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
 public class InventoryController {
-    // Servicio al que el controlador delega las reglas y operaciones de negocio.
+    // The controller delegates business operations to this service.
     private final InventoryService service;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public InventoryController(InventoryService service) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.service = service;
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "View stock balances")
     @GetMapping
-    // Devuelve saldos actuales por producto: físico, reservado y disponible.
+    // Return the physical, reserved and available stock for each product.
     public PageResponse<InventoryDtos.Balance> balances(
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) Long productId,
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Devuelve saldos actuales por producto: físico, reservado y disponible.
+        // Return the physical, reserved and available stock for each product.
         return service.balances(productId, page, size);
     }
 
-    // Expone una acción HTTP POST; el servicio determina los cambios que se realizan.
+    // Handle POST requests and delegate the operation to the service.
+    @Operation(summary = "Adjust stock for a product")
     @PostMapping("/{productId}/adjustments")
-    // Si termina correctamente, Spring responde 204 sin cuerpo; las excepciones siguen su propio manejo.
+    // Return HTTP 204 with an empty body on success.
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    // Spring Security permite esta operación solo a ADMIN u OPERATIONS.
+    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
-    // Delega el ajuste físico junto con su movimiento y auditoría transaccionales.
+    // Save the stock adjustment, movement and audit event in one transaction.
     public void adjust(
-            // Spring toma el identificador de la ruta; @RequestBody, si aparece, se obtiene del JSON.
+            // Spring reads the ID from the URL and any request body from JSON.
             @PathVariable long productId, @Valid @RequestBody InventoryDtos.Adjustment request) {
-        // Delega el ajuste físico junto con su movimiento y auditoría transaccionales.
+        // Save the stock adjustment, movement and audit event in one transaction.
         service.adjust(productId, request);
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
-    // PARECE QUE pinta aqui
+    // Handle GET requests to this route.
+    @Operation(summary = "List stock movements")
     @GetMapping("/movements")
-    // Devuelve el historial de movimientos; no calcula una reserva nueva.
+    // Returns the movement history; does not calculate a new reserve.
     public PageResponse<InventoryDtos.Movement> movements(
-            // Lee un filtro opcional de la URL; si se omite, llega null.
+            // An omitted query parameter leaves this filter unset.
             @RequestParam(required = false) Long productId,
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Devuelve el historial de movimientos; no calcula una reserva nueva.
+        // Returns the movement history; does not calculate a new reserve.
         return service.movements(productId, page, size);
     }
 
-    // Expone una consulta HTTP GET; Spring selecciona este método para la ruta indicada.
+    // Handle GET requests to this route.
+    @Operation(summary = "List current stock reservations")
     @GetMapping("/reservations")
-    // Lista las reservas existentes por pedido y producto; este GET no reserva unidades.
+    // List existing reservations per order and product; this GET does not reserve units.
     public PageResponse<InventoryDtos.Reservation> reservations(
-            // Lee page de la URL: 0 es la primera página; usa el valor por defecto si se omite.
+            // Read the zero-based page number, using the default if omitted.
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            // Lee cuántos resultados se piden por página; las restricciones indicadas limitan ese valor.
+            // Validate the requested number of results per page.
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        // Lista las reservas existentes por pedido y producto; este GET no reserva unidades.
+        // List existing reservations per order and product; this GET does not reserve units.
         return service.reservations(page, size);
     }
 }

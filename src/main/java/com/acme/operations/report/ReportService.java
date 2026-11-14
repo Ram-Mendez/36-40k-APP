@@ -10,35 +10,35 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
-// Spring registra esta clase como servicio y permite inyectarla; las reglas las implementan sus métodos.
+// Spring registers this class as a service. Its methods implement the business rules.
 @Service
-// En las lecturas, REPEATABLE_READ mantiene coherentes el conteo y las filas del informe.
+// In the readings, REPEATABLE_READ keeps the count and rows of the report consistent.
 @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class ReportService {
-    // Acceso a persistencia separado de las reglas que coordina este servicio.
+    // The repository handles persistence for this service.
     private final ReportRepository repository;
 
-    // Spring suministra las dependencias a este único constructor; no hace falta escribir @Autowired.
+    // Spring injects the dependencies through the single constructor.
     public ReportService(ReportRepository repository) {
-        // Conserva la referencia recibida para que los métodos puedan reutilizar esta dependencia.
+        // Keep the injected dependency for later calls.
         this.repository = repository;
     }
 
-    // Valida el intervalo antes de consultar ventas completadas por cliente.
+    // Valid the interval before consulting sales completed by customer.
     public PageResponse<ReportDtos.CustomerSales> sales(
             Instant from, Instant to, int page, int size) {
-        // Si llegan ambas fechas, from debe ser estrictamente anterior a to.
+        // If both dates arrive, from must be strictly prior to.
         if (from != null && to != null && !from.isBefore(to))
-            // Rechaza con 400 un intervalo vacío o invertido.
+            // It rejects with 400 an empty or inverted interval.
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "from must be earlier than to");
-        // Delega el cálculo SQL y devuelve su página de resultados.
+        // Delegate the SQL calculation and return your results page.
         return repository.sales(from, to, page, size);
     }
 
-    // Lista productos cuyo disponible está por debajo o igual al umbral.
+    // List products available below or equal to the threshold.
     public PageResponse<ReportDtos.LowStock> lowStock(long threshold, int page, int size) {
-        // El repositorio calcula físico menos reservado y aplica la paginación.
+        // The repository calculates less reserved physical and applies the pagation.
         return repository.lowStock(threshold, page, size);
     }
 }

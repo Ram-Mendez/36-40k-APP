@@ -33,7 +33,7 @@ public class CarrierController {
     ResponseEntity<?> quote(@RequestParam(value = "orderId", required = false) String orderId,
                             @RequestParam(value = "amount", required = false) String amount,
                             @RequestHeader(value = "X-Request-ID", required = false) String requestId) throws InterruptedException {
-        // Los modos reproducen los fallos del transportista anterior.
+        // The modes reproduce the failures of the previous carrier.
         if ("slow".equals(mode)) Thread.sleep(5000);
         String id = orderId != null && orderId.matches("[0-9]+") ? orderId : "unknown";
         int status = "unavailable".equals(mode) ? 503 : 200;

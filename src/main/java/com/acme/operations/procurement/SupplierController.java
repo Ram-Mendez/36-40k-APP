@@ -1,5 +1,8 @@
 package com.acme.operations.procurement;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.acme.operations.common.PageResponse;
 
 import jakarta.validation.Valid;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
+@Tag(name = "Suppliers")
 @RestController
 @RequestMapping("/api/v1/suppliers")
 @Validated
@@ -23,6 +27,7 @@ public class SupplierController {
         this.service = service;
     }
 
+    @Operation(summary = "List suppliers")
     @GetMapping
     public PageResponse<ProcurementDtos.Supplier> list(
             @RequestParam(required = false) String search,
@@ -34,11 +39,13 @@ public class SupplierController {
         return service.suppliers(search, active, page, size, sort, direction);
     }
 
+    @Operation(summary = "View a supplier")
     @GetMapping("/{id}")
     public ProcurementDtos.Supplier get(@PathVariable @Positive long id) {
         return service.supplier(id);
     }
 
+    @Operation(summary = "Create a supplier")
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ResponseEntity<ProcurementDtos.Supplier> create(@Valid @RequestBody ProcurementDtos.SupplierInput input) {
@@ -46,6 +53,7 @@ public class SupplierController {
         return ResponseEntity.created(URI.create("/api/v1/suppliers/" + supplier.id())).body(supplier);
     }
 
+    @Operation(summary = "Update a supplier")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ProcurementDtos.Supplier update(
@@ -53,6 +61,7 @@ public class SupplierController {
         return service.updateSupplier(id, input);
     }
 
+    @Operation(summary = "Deactivate a supplier")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     public ResponseEntity<Void> deactivate(@PathVariable @Positive long id) {

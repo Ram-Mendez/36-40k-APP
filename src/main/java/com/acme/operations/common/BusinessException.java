@@ -2,32 +2,32 @@ package com.acme.operations.common;
 
 import org.springframework.http.HttpStatus;
 
-// Error de negocio no comprobado; por defecto provoca rollback al salir de una transacción Spring.
+// Unproven business error; by default it causes rollback when you leave a Spring transaction.
 public class BusinessException extends RuntimeException {
-    // Estado HTTP que ApiExceptionHandler utilizará cuando este error llegue al controlador.
+    // HTTP status that ApiExceptionHandler will use when this error reaches the controller.
     private final HttpStatus status;
-    // Código estable que permite al cliente distinguir la causa sin interpretar el mensaje.
+    // A stable code that allows the customer to distinguish the cause without interpreting the message.
     private final String code;
 
-    // Agrupa estado, código y explicación; aquí todavía no se envía ninguna respuesta HTTP.
+    // Group status, code and explanation; here no HTTP response is yet sent.
     public BusinessException(HttpStatus status, String code, String message) {
-        // Guarda el texto en RuntimeException para recuperarlo con getMessage().
+        // Save the text in RuntimeException to recover it with getMessage ().
         super(message);
-        // Conserva estado y código para que el handler pueda leerlos.
+        // Keep status and code so the handler can read them.
         this.status = status;
-        // Conserva el código de negocio que el frontend podrá distinguir del mensaje.
+        // It retains the business code that the front will be able to distinguish from the message.
         this.code = code;
     }
 
-    // Expone el estado elegido por la regla de negocio que lanzó la excepción.
+    // It exposes the state chosen by the business rule that released the exception.
     public HttpStatus getStatus() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return status;
     }
 
-    // Expone el código funcional del error, por ejemplo INVALID_QUANTITY.
+    // It exposes the functional code of the error, for example INVALID_QUANTITY.
     public String getCode() {
-        // Entrega el valor almacenado en este objeto al código que lo solicitó.
+        // Return the current value.
         return code;
     }
 }

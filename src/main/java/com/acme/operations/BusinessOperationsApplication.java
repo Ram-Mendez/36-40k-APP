@@ -3,12 +3,12 @@ package com.acme.operations;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-// Activa autoconfiguración y búsqueda de componentes desde este paquete y sus subpaquetes.
+// It activates self-configuration and search for components from this package and its subpackages.
 @SpringBootApplication
 public class BusinessOperationsApplication {
-    // Punto de entrada de Java; recibe opciones de arranque desde la línea de comandos.
+    // Java input point; gets boot options from the command line.
     public static void main(String[] args) {
-        // Spring crea el contexto, conecta sus beans y arranca el servidor web configurado.
+        // Spring creates the context, connects your beans and starts the configured web server.
         SpringApplication.run(BusinessOperationsApplication.class, args);
     }
 }

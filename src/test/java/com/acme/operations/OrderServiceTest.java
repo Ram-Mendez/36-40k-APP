@@ -22,54 +22,54 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-// Mockito prepara los dobles sin arrancar Spring ni una base de datos.
+// Mockito prepares the doubles without starting Spring or a database.
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
-    // Los repositorios y servicios son simulados; permiten observar qué intentó hacer OrderService.
+    // The repositories and services are simulated; they allow you to observe what OrderService tried to do.
     @Mock OrderRepository repository;
     @Mock InventoryService inventory;
     @Mock AuditService audit;
-    // Inyecta los mocks en el servicio que se va a probar.
+    // Inject the mocks into the service to be tested.
     @InjectMocks OrderService service;
 
-    // Fabrica una cabecera de ejemplo con el estado indicado y versión 3.
+    // It makes an example header with the indicated status and version 3.
     private OrderRepository.Header header(String state) {
         return new OrderRepository.Header(
                 1, 2, "Client", state, BigDecimal.TEN, 3, null, null, Instant.EPOCH, Instant.EPOCH);
     }
 
-    // Repite el caso con tres estados que no son DRAFT.
+    // Repeat the case with three states that are not DRAFT.
     @ParameterizedTest
     @ValueSource(strings = {"CONFIRMED", "COMPLETED", "CANCELLED"})
-    // Confirmar exige un borrador; aquí debe fallar antes de tocar inventario.
+    // Confirm requires a draft; here you must fail before you touch inventory.
     void confirmationOfNonDraftFailsBeforeStockChanges(String state) {
-        // Hace que la consulta de cabecera protegida devuelva el estado del caso actual.
+        // It causes the protected header consultation to return the current case status.
         when(repository.header(1, true)).thenReturn(header(state));
-        // Espera el error de negocio de confirmación.
+        // Wait for the confirmation business error.
         assertThatThrownBy(() -> service.confirm(1)).isInstanceOf(BusinessException.class);
-        // Verifica que no se llamó a inventario, auditoría ni transición de estado.
+        // He verifies that no inventory, audit or state transition was called.
         verifyNoInteractions(inventory, audit);
         verify(repository, never()).transition(anyLong(), anyString(), any(), any());
     }
 
-    // Un borrador sin líneas no puede reservar productos ni pasar a confirmado.
+    // A draft without lines cannot reserve products or move to confirmed.
     @Test
     void emptyOrderCannotTransitionOrReserveStock() {
-        // Simula un pedido DRAFT cuya lista de líneas está vacía.
+        // It simulates a DRAFT order whose list of lines is empty.
         when(repository.header(1, true)).thenReturn(header("DRAFT"));
         when(repository.lines(1)).thenReturn(List.of());
-        // La confirmación debe lanzar una excepción sin hacer cambios posteriores.
+        // Confirmation must throw an exception before any further changes are made.
         assertThatThrownBy(() -> service.confirm(1)).isInstanceOf(BusinessException.class);
         verifyNoInteractions(inventory, audit);
         verify(repository, never()).transition(anyLong(), anyString(), any(), any());
     }
 
-    // Una cotización basada en una versión antigua no puede consumir el stock.
+    // A quote based on an old version cannot consume the stock.
     @Test
     void staleCarrierQuoteCannotConsumeStock() {
-        // Simula versión actual 3; la llamada utiliza versión esperada 2.
+        // It simulates current version 3; the call uses expected version 2.
         when(repository.header(1, true)).thenReturn(header("CONFIRMED"));
-        // Espera el conflicto antes de llamar a inventario o cambiar el estado.
+        // Wait for the conflict before you call inventory or change the state.
         assertThatThrownBy(
                         () ->
                                 service.complete(

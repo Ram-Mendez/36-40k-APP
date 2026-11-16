@@ -1,0 +1,82 @@
+{
+  "phase": "five-intentional-defects-active",
+  "date": "2026-11-16",
+  "base": "74ccb5e53a06af0c41fe870b8d617586c6038c5d",
+  "runnerExitCode": 1,
+  "suites": [
+    {
+      "suite": "com.acme.operations.batch16.Batch16CustomerValidationTest",
+      "tests": 3,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "malformedEmailIsRejectedBeforeCallingTheService"
+      ]
+    },
+    {
+      "suite": "com.acme.operations.batch16.Batch16ReportPermissionsTest",
+      "tests": 5,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "businessRolesCanReadSales(String)[2]"
+      ]
+    },
+    {
+      "suite": "com.acme.operations.batch16.Batch16PaginationTest",
+      "tests": 6,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "lastPageKeepsItsItemAndTheSameTotalPageCount",
+        "emptySmallAndExactPagesRemainConsistent(int, int)[2]",
+        "twentyOneResultsNeedTwoPagesOfTwenty"
+      ]
+    },
+    {
+      "suite": "com.acme.operations.batch16.Batch16TracePropagationTest",
+      "tests": 3,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "callerIdReachesTheRemoteServiceUnchanged",
+        "generatedIdAlsoReachesTheRemoteService"
+      ]
+    },
+    {
+      "suite": "com.acme.operations.ShippingClientTest",
+      "tests": 11,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "forwardsRequestId"
+      ]
+    },
+    {
+      "suite": "com.acme.shipping.QuoteServiceTest",
+      "tests": 6,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "usesConfiguredPricesAndNormalizesEquivalentAmounts",
+        "appliesShippingPolicyAtItsBoundaries(String, String)[3]"
+      ]
+    },
+    {
+      "suite": "com.acme.shipping.QuoteHttpTest",
+      "tests": 14,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failedCases": [
+        "amountAtTheFreeShippingThresholdReturnsZeroCost"
+      ]
+    }
+  ]
+}

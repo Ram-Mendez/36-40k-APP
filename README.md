@@ -1,5 +1,7 @@
 # business-operations-backend
 
+**November 16 training batch.** Start with [five independent debugging exercises](EMPIEZA-AQUI.md). This local training branch contains five intentional defects; its batch checks initially fail.
+
 **Practice V3.** [Startup guide and five support tickets](practica-v3/PRACTICA-V3.md).
 
 A B2B distribution application for customers, products, inventory, reservations, orders, shipping and auditing. Two Java 21 / Spring Boot 3.5.12 services communicate over REST. The operations backend uses PostgreSQL 16 and serves the Angular application in `frontend/`. The shipping service quotes delivery costs.

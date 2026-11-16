@@ -22,7 +22,7 @@ import java.time.Instant;
 // Validate the constraints on method parameters.
 @Validated
 // ADMIN, OPERATIONS and READONLY can read this resource.
-@PreAuthorize("hasAnyRole('ADMIN','OPERATIONS','READONLY')")
+@PreAuthorize("hasAnyRole('ADMIN','READONLY')")
 public class ReportController {
     // The controller delegates business operations to this service.
     private final ReportService service;

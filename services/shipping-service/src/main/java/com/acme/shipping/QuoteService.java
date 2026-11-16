@@ -19,7 +19,7 @@ public class QuoteService {
     public Quote quote(long orderId, BigDecimal amount) {
         BigDecimal normalized = amount.setScale(2, RoundingMode.UNNECESSARY);
         BigDecimal cost =
-                normalized.compareTo(pricing.freeThreshold()) >= 0
+                normalized.compareTo(pricing.freeThreshold()) > 0
                         ? BigDecimal.ZERO
                         : pricing.flatCost();
         return new Quote(

@@ -1,0 +1,113 @@
+@backend = http://localhost:38087
+@shipping = http://localhost:39097
+
+### Sign in as ADMIN. Run this before tickets 02, 04 and 05.
+POST {{backend}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"admin","password":"DevPassword123!"}
+
+> {% client.global.set("batch16AdminToken", response.body.accessToken); %}
+
+### 01 - Below the threshold: cost must be 7.50.
+GET {{shipping}}/quotes?orderId=42&amount=199.99
+
+### 01 - At the threshold: cost must be 0.00.
+GET {{shipping}}/quotes?orderId=42&amount=200.00
+
+### 01 - Above the threshold: cost must be 0.00.
+GET {{shipping}}/quotes?orderId=42&amount=200.01
+
+### 02 - A new tax ID is generated for each send. Invalid email must return 400.
+POST {{backend}}/api/v1/customers
+Authorization: Bearer {{batch16AdminToken}}
+Content-Type: application/json
+
+{"name":"Batch 16 invalid email","taxId":"B16-BAD-{{$timestamp}}","email":"ana.example.test","address":"16 Test Street"}
+
+### 02 - Valid email must return 201.
+POST {{backend}}/api/v1/customers
+Authorization: Bearer {{batch16AdminToken}}
+Content-Type: application/json
+
+{"name":"Batch 16 valid email","taxId":"B16-OK-{{$timestamp}}","email":"ana@example.test","address":"16 Test Street"}
+
+### 03 - Sign in as OPERATIONS.
+POST {{backend}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"operations","password":"DevPassword123!"}
+
+> {% client.global.set("batch16OperationsToken", response.body.accessToken); %}
+
+### 03 - OPERATIONS must receive 200.
+GET {{backend}}/api/v1/reports/sales
+Authorization: Bearer {{batch16OperationsToken}}
+
+### 03 - ADMIN control: 200.
+GET {{backend}}/api/v1/reports/sales
+Authorization: Bearer {{batch16AdminToken}}
+
+### 03 - Sign in as READONLY.
+POST {{backend}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"readonly","password":"DevPassword123!"}
+
+> {% client.global.set("batch16ReadonlyToken", response.body.accessToken); %}
+
+### 03 - READONLY control: 200.
+GET {{backend}}/api/v1/reports/sales
+Authorization: Bearer {{batch16ReadonlyToken}}
+
+### 03 - Anonymous control: 401.
+GET {{backend}}/api/v1/reports/sales
+
+### 04 - Eight seeded products, three per page: totalPages must be 3.
+GET {{backend}}/api/v1/products?page=0&size=3&sort=id&direction=asc
+Authorization: Bearer {{batch16AdminToken}}
+
+### 04 - The final two products exist on page 2.
+GET {{backend}}/api/v1/products?page=2&size=3&sort=id&direction=asc
+Authorization: Bearer {{batch16AdminToken}}
+
+### 05 - Read the seeded customer ID.
+GET {{backend}}/api/v1/customers?search=B28000001
+Authorization: Bearer {{batch16AdminToken}}
+
+> {% client.global.set("batch16CustomerId", response.body.content[0].id); %}
+
+### 05 - Read the seeded product ID.
+GET {{backend}}/api/v1/products?search=GLOVE-100
+Authorization: Bearer {{batch16AdminToken}}
+
+> {% client.global.set("batch16ProductId", response.body.content[0].id); %}
+
+### 05 - Create a new order for every attempt.
+POST {{backend}}/api/v1/orders
+Authorization: Bearer {{batch16AdminToken}}
+Content-Type: application/json
+
+{"customerId":{{batch16CustomerId}}}
+
+> {% client.global.set("batch16OrderId", response.body.id); %}
+
+### 05 - Two boxes at 24.90: total 49.80, below the shipping threshold.
+PUT {{backend}}/api/v1/orders/{{batch16OrderId}}/lines/{{batch16ProductId}}
+Authorization: Bearer {{batch16AdminToken}}
+Content-Type: application/json
+
+{"quantity":2}
+
+### 05 - Confirm and reserve stock.
+POST {{backend}}/api/v1/orders/{{batch16OrderId}}/confirm
+Authorization: Bearer {{batch16AdminToken}}
+
+### 05 - Complete. Compare requestId in both applications' consoles.
+POST {{backend}}/api/v1/orders/{{batch16OrderId}}/complete
+Authorization: Bearer {{batch16AdminToken}}
+X-Request-ID: lab16-trace-001
+
+### 05 - Direct shipping control: its log must preserve this ID.
+GET {{shipping}}/quotes?orderId=42&amount=49.80
+X-Request-ID: lab16-direct-001

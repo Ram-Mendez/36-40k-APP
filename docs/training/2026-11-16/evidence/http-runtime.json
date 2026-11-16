@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-16",
+  "mode": "real-app-http-postgresql",
+  "launch": "Java 21 using main classes and exact Program arguments from .run files",
+  "backendReadiness": "UP",
+  "shippingReadiness": "UP",
+  "swaggerStatus": 200,
+  "ticket01": [
+    {
+      "amount": "199.99",
+      "status": 200,
+      "cost": 7.5
+    },
+    {
+      "amount": "200.00",
+      "status": 200,
+      "cost": 7.5
+    },
+    {
+      "amount": "200.01",
+      "status": 200,
+      "cost": 0.0
+    }
+  ],
+  "ticket02": {
+    "invalidEmailStatus": 201,
+    "validCustomerId": 5,
+    "validEmailStatus": 201,
+    "invalidCustomerId": 4
+  },
+  "ticket03": {
+    "roles": [
+      {
+        "username": "admin",
+        "status": 200
+      },
+      {
+        "username": "operations",
+        "status": 403
+      },
+      {
+        "username": "readonly",
+        "status": 200
+      }
+    ],
+    "anonymousStatus": 401
+  },
+  "ticket04": {
+    "lastPageCount": 2,
+    "totalPages": 2,
+    "size": 3,
+    "totalElements": 8
+  },
+  "ticket05": {
+    "shippingCost": 7.5,
+    "orderStatus": "COMPLETED",
+    "total": 49.8,
+    "orderId": 2,
+    "shippingRequestId": "5a3cdab9-249c-4344-84e1-9687e1c0361c",
+    "directRequestId": "lab16-direct-001",
+    "backendRequestId": "lab16-trace-001"
+  },
+  "database": "lab_20261116",
+  "port": 35437
+}

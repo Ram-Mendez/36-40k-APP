@@ -1,0 +1,19 @@
+name: business-operations-batch16
+services:
+  postgres:
+    image: postgres:16.13-alpine
+    environment:
+      POSTGRES_DB: lab_20261116
+      POSTGRES_USER: lab_20261116
+      POSTGRES_PASSWORD: lab_20261116_dev
+    ports:
+      - "127.0.0.1:35437:5432"
+    volumes:
+      - batch16-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_20261116 -d lab_20261116"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  batch16-data:

@@ -1,112 +1,108 @@
-# Incidencias del 16/11/2026
+# Incidencias del 16/11 — app en ejecución
 
-Cinco ejercicios independientes. Los datos de cada test se crean de nuevo al ejecutarlo. No hay que preparar pedidos, recepciones, devoluciones ni facturas. Código y contratos de API conservan sus nombres en inglés.
+Arranca **Shipping LAB 16-11** y **Backend LAB 16-11** con Debug, como indica [EMPIEZA-AQUI.md](../../../EMPIEZA-AQUI.md). Backend: `http://localhost:38087`. Shipping: `http://localhost:39097`.
 
-Los tests son el punto de entrada. Los ejemplos HTTP describen el contrato que comprueban; no tienes que lanzar esas peticiones contra tu aplicación habitual.
+Los cinco ejercicios son independientes. Puedes enviar las peticiones desde Swagger o desde [batch-2026-11-16.http](../../../http/batch-2026-11-16.http). Los tests quedan como comprobación final de cada corrección.
 
 ## 01 — El envío gratis falla justo en el límite
 
-**Tema:** Java, condiciones y cantidades decimales. **Dificultad:** corta. **Tiempo estimado:** 15–25 minutos.
+**Tema:** Java y cantidades decimales. **Tiempo estimado:** 15–25 minutos.
 
-**Contexto:** el servicio de envíos calcula cuánto cuesta enviar un pedido. La tarifa es 7,50 € para importes inferiores a 200 €. A partir de 200 €, incluido ese importe, el envío es gratis. Cotizar solo calcula el precio; no crea un envío ni necesita un pedido guardado.
+**Contexto:** enviar una compra de menos de 200 € cuesta 7,50 €. Desde 200 €, incluido ese importe, debe ser gratis. Cotizar solo calcula el precio: no necesitas crear un pedido.
 
-**Aviso de soporte:** un cliente compra exactamente 200 € y la cotización añade 7,50 € de envío. Si compra 200,01 €, ya sale gratis.
+**Reproducción:** abre estas tres direcciones en el navegador, con Shipping en Debug:
 
-**Reproducción:** ejecuta el ticket `01`. El test llama al cálculo y también al endpoint HTTP del servicio, que arranca en un puerto libre.
-
-```http
-GET /quotes?orderId=42&amount=200.00
+```text
+http://localhost:39097/quotes?orderId=42&amount=199.99
+http://localhost:39097/quotes?orderId=42&amount=200.00
+http://localhost:39097/quotes?orderId=42&amount=200.01
 ```
 
-`orderId=42` es una referencia de la cotización. No debes crear un pedido con ese ID. `amount=200.00` es el importe de la compra.
+`orderId=42` es una referencia para la cotización; el servicio no busca ese pedido en la base. `amount` es el importe de la compra.
 
-| `amount` | `cost` esperado |
-| --- | --- |
-| `199.99` | `7.50` |
-| `200.00` | `0.00` |
-| `200.01` | `0.00` |
+**Fallo preparado:** para `amount=200.00`, recibes `cost=7.50`.
 
-**Aceptación:** los tres casos funcionan, HTTP sigue devolviendo 200 y se conserva la referencia. La regla también respeta una configuración distinta: coste 12,30 € y envío gratis desde 100 €. `100` y `100.00` deben producir la misma cotización.
+**Aceptación:** los costes son `7.50`, `0.00` y `0.00`, respectivamente. Se conserva `reference` y HTTP 200. Una tarifa configurada de 12,30 € y un umbral de 100 € también deben funcionar; `100` y `100.00` son equivalentes.
 
-**Tests:** `services/shipping-service/src/test/java/com/acme/shipping/QuoteServiceTest.java` y `QuoteHttpTest.java` en el mismo directorio.
+**Depuración:** la petición entra por `services/shipping-service/src/main/java/com/acme/shipping/QuoteController.java`. Sigue el recorrido del importe desde ahí.
 
 ## 02 — Se acepta un correo sin arroba
 
-**Tema:** validación de entrada en REST. **Dificultad:** corta/media. **Tiempo estimado:** 20–35 minutos.
+**Tema:** validación REST. **Tiempo estimado:** 20–35 minutos.
 
-**Contexto:** una persona de atención al cliente registra el correo al que enviará las comunicaciones. La API debe rechazar un correo mal formado antes de llamar al servicio de clientes.
+**Contexto:** atención al cliente registra un correo para enviar comunicaciones. El formato debe validarse antes de guardar al cliente.
 
-**Aviso de soporte:** este cuerpo se acepta, aunque `email=ana.example.test` no contiene arroba:
+**Reproducción:** inicia sesión como `admin`. En Swagger envía `POST /api/v1/customers`:
 
-```http
-POST /api/v1/customers
-Content-Type: application/json
-
-{"name":"Batch 16 customer","taxId":"BATCH16-CUSTOMER","email":"ana.example.test","address":"16 Test Street"}
+```json
+{"name":"Batch 16 customer","taxId":"B16-EMAIL-1","email":"ana.example.test","address":"16 Test Street"}
 ```
 
-**Reproducción:** ejecuta el ticket `02`. Se usa el controlador real y la validación real. El servicio de clientes se sustituye por una respuesta de prueba: no se escribe en ninguna base de datos. Los permisos se comprueban por separado en el ticket 03.
+**Fallo preparado:** devuelve `201` y guarda el correo sin arroba. Para repetir, usa un `taxId` nuevo, por ejemplo `B16-EMAIL-2`: el anterior ya existe. El archivo HTTP genera ese identificador automáticamente.
 
-**Aceptación:** el correo anterior devuelve `400`, `code=VALIDATION_ERROR` y una infracción del campo `email`; el servicio de clientes no llega a ejecutarse. `email=ana@example.test` devuelve `201` y `Location=/api/v1/customers/42`. Un correo vacío también se rechaza. No se exige comprobar si el buzón existe.
+**Aceptación:** el correo incorrecto devuelve `400`, `code=VALIDATION_ERROR` y una infracción del campo `email`. No se crea un cliente. Con un `taxId` nuevo y `email=ana@example.test`, devuelve `201`. Un correo vacío también se rechaza. No se exige comprobar si existe el buzón.
 
-**Test:** `src/test/java/com/acme/operations/batch16/Batch16CustomerValidationTest.java`.
+**Depuración:** entrada por `src/main/java/com/acme/operations/customer/CustomerController.java`. Observa si la petición inválida llega al método que crea el cliente.
 
 ## 03 — Operaciones no puede consultar ventas
 
-**Tema:** autorización con Spring Security. **Dificultad:** media. **Tiempo estimado:** 30–45 minutos.
+**Tema:** autorización de Spring Security. **Tiempo estimado:** 30–45 minutos.
 
-**Contexto:** OPERATIONS es el personal que gestiona la operativa diaria. Necesita consultar el informe de ventas. READONLY solo consulta y ADMIN administra. Los tres roles tienen permiso de lectura sobre este informe.
+**Contexto:** OPERATIONS gestiona la operativa diaria y necesita consultar ventas. ADMIN administra y READONLY solo consulta. Los tres pueden leer este informe.
 
-**Aviso de soporte:** el usuario de OPERATIONS recibe `403 ACCESS_DENIED` al abrir `GET /api/v1/reports/sales`. ADMIN y READONLY pueden abrirlo.
+**Reproducción:** ejecuta `POST /api/v1/auth/login` con `{"username":"operations","password":"DevPassword123!"}`. Usa el `accessToken` nuevo en Authorize y llama a `GET /api/v1/reports/sales`. Repite con `admin` y `readonly`, cambiando el token cada vez. El archivo HTTP mantiene los tres tokens por separado.
 
-**Reproducción:** ejecuta el ticket `03`. Cada caso aporta una identidad de prueba a la cadena real de seguridad. El informe está vacío de forma deliberada: el objetivo es comprobar si se permite entrar, no calcular ventas.
+**Fallo preparado:** OPERATIONS recibe `403 ACCESS_DENIED`. ADMIN y READONLY reciben `200`.
 
-| Identidad | Respuesta esperada |
-| --- | --- |
-| `ADMIN` | `200` |
-| `OPERATIONS` | `200` |
-| `READONLY` | `200` |
-| Rol ajeno `OUTSIDE` | `403` |
-| Sin autenticación | `401` |
+**Aceptación:** los tres roles reciben `200`. Sin token se mantiene `401`. No se permite entrar a roles ajenos. El informe puede estar vacío: se comprueba el permiso, no el cálculo de ventas.
 
-**Aceptación:** se cumple la tabla. Un acceso rechazado no llama al servicio de informes. La corrección conserva la autenticación y los controles de permisos; no debe convertir el informe en una ruta pública.
+**Depuración:** ruta declarada en `src/main/java/com/acme/operations/report/ReportController.java`. Observa si el usuario rechazado llega al cuerpo del método.
 
-**Test:** `src/test/java/com/acme/operations/batch16/Batch16ReportPermissionsTest.java`.
+## 04 — El catálogo anuncia menos páginas de las necesarias
 
-## 04 — El listado dice que no hay segunda página
+**Tema:** paginación y colecciones. **Tiempo estimado:** 20–35 minutos.
 
-**Tema:** colecciones y metadatos de paginación. **Dificultad:** corta/media. **Tiempo estimado:** 20–35 minutos.
+**Contexto:** la pantalla utiliza `totalPages` para ofrecer las páginas disponibles. Los números de página empiezan en cero. El catálogo inicial tiene ocho productos. Con tres por página, necesita tres páginas: `0`, `1` y `2`.
 
-**Contexto:** la pantalla utiliza `totalPages` para saber cuántas páginas puede mostrar. Los números de página empiezan en cero. Si hay 21 resultados y caben 20 por página, existen la página `0` y la página `1`.
+**Reproducción:** con el token de `admin`, consulta:
 
-**Aviso de soporte:** la respuesta contiene 20 elementos y `totalElements=21`, pero anuncia `totalPages=1`. El último elemento existe: la pantalla no ofrece la segunda página porque el total está mal.
+```text
+GET /api/v1/products?page=0&size=3&sort=id&direction=asc
+GET /api/v1/products?page=2&size=3&sort=id&direction=asc
+```
 
-**Reproducción:** ejecuta el ticket `04`. El test proporciona 21 elementos y sus totales mediante una página en memoria. No ejecuta SQL.
+**Fallo preparado:** ambas respuestas indican `totalElements=8` y `totalPages=2`. La segunda petición sí devuelve los dos últimos productos, aunque los metadatos no anuncian esa tercera página.
 
-| `totalElements` | `size` | `totalPages` esperado |
-| --- | --- | --- |
-| `0` | `20` | `0` |
-| `1` | `20` | `1` |
-| `20` | `20` | `1` |
-| `21` | `20` | `2` |
-| `40` | `20` | `2` |
+**Aceptación:** ambas respuestas deben indicar `totalPages=3`. El contenido, `totalElements`, `page` y `size` se conservan. Comprueba también páginas exactas y resultados vacíos. Si has añadido productos, calcula las páginas con el nuevo `totalElements`; no borres datos para repetir.
 
-**Aceptación:** la tabla se cumple. La segunda página conserva el elemento 21, `page=1`, `totalElements=21` y `totalPages=2`. La corrección no cambia el contenido ni el tamaño solicitado.
-
-**Test:** `src/test/java/com/acme/operations/batch16/Batch16PaginationTest.java`.
+**Depuración:** entrada por `src/main/java/com/acme/operations/product/ProductController.java`. Sigue la construcción de la respuesta paginada. No necesitas modificar consultas SQL.
 
 ## 05 — Se pierde el identificador entre servicios
 
-**Tema:** comunicación HTTP y trazabilidad. **Dificultad:** media. **Tiempo estimado:** 35–50 minutos.
+**Tema:** comunicación HTTP y trazabilidad. **Tiempo estimado:** 35–50 minutos.
 
-**Contexto:** `X-Request-ID` es una cabecera HTTP que permite relacionar los logs de una misma petición entre servicios. No es el ID del pedido ni un token de acceso. El backend recibe ese valor y debe enviarlo también al servicio que cotiza el envío.
+**Contexto:** `X-Request-ID` es una cabecera que relaciona los logs de una petición entre servicios. No es el ID del pedido ni un token. El backend debe pasar ese mismo identificador al servicio de envíos.
 
-**Aviso de soporte:** el backend devuelve una cotización válida, pero el servicio remoto no recibe `X-Request-ID`. Resulta difícil relacionar sus logs con la petición original.
+**Preparación:** usa las peticiones del bloque 05 del archivo HTTP, en orden. Buscan el cliente inicial con `search=B28000001` y el producto con `search=GLOVE-100`, y guardan sus `id`. Después crean un pedido nuevo con ese `customerId`, añaden una línea de `quantity=2` y lo confirman. Las dos cajas cuestan 49,80 €, lejos del límite del ejercicio 01. Los IDs se copian automáticamente de las respuestas.
 
-**Reproducción:** ejecuta el ticket `05`. El test pasa `X-Request-ID=batch16-order-42` por el filtro real y solicita una cotización mediante el cliente HTTP real. Un servidor local de prueba captura las cabeceras. No se completa ningún pedido ni se consume stock.
+**Reproducción:** completa ese pedido mediante `POST /api/v1/orders/{id}/complete`, con el token ADMIN y la cabecera `X-Request-ID: lab16-trace-001`. En la consola de Backend busca la línea de `/complete`. En la consola de Shipping busca la de `/quotes`. Compara `requestId`.
 
-**Esperado:** la respuesta del backend y la petición que recibe el servidor remoto comparten `X-Request-ID=batch16-order-42`. Si el cliente inicial no manda esa cabecera, el backend genera un identificador y propaga ese mismo valor.
+**Fallo preparado:** el pedido se completa y su `shippingCost` es `7.50`, pero Shipping registra un UUID diferente de `lab16-trace-001`.
 
-**Aceptación:** ambos casos conservan el identificador. La cotización sigue teniendo `reference=BATCH16-QUOTE` y `cost=7.50`. Se envían `orderId=42` y `amount=19.90` sin perder decimales. Al terminar se limpia el contexto de logs de la petición. Los controles previos del cliente HTTP continúan pasando.
+**Control:** llama directamente a `GET http://localhost:39097/quotes?orderId=42&amount=49.80` con `X-Request-ID: lab16-direct-001`. Shipping sí conserva ese identificador cuando lo recibe directamente.
 
-**Tests:** `src/test/java/com/acme/operations/batch16/Batch16TracePropagationTest.java` y `src/test/java/com/acme/operations/ShippingClientTest.java`.
+**Aceptación:** al completar un pedido nuevo, ambas consolas muestran `requestId=lab16-trace-001`. La cotización y el stock siguen funcionando. Si no envías la cabecera inicial, el identificador generado por Backend también debe llegar a Shipping.
+
+**Repetición:** crea otro pedido con el bloque 05. No reutilices un pedido `COMPLETED`. Cada ejecución correcta consume dos unidades del producto; hay existencias de desarrollo para practicar.
+
+**Depuración:** entrada por `src/main/java/com/acme/operations/order/OrderController.java`. Sigue la petición desde la operación de completar hasta el servicio remoto.
+
+## Validación adicional
+
+Después de corregir un ejercicio y reproducirlo por HTTP:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\test-batch-2026-11-16.ps1 -Ticket 01
+```
+
+Cambia `01` por el ticket elegido. `-Ticket all` comprueba los cinco. Las pruebas mantienen los casos de frontera, incluido el de 21 resultados con páginas de 20; no hace falta preparar esos datos manualmente.

@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Backend LAB 16-11" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="C:/Program Files/Eclipse Adoptium/jdk-21.0.10.7-hotspot" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="MAIN_CLASS_NAME" value="com.acme.operations.BusinessOperationsApplication" />
+    <module name="business-operations-backend" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=dev --server.address=127.0.0.1 --server.port=38087 --spring.datasource.url=jdbc:postgresql://localhost:35437/lab_20261116 --spring.datasource.username=lab_20261116 --spring.datasource.password=lab_20261116_dev --shipping.base-url=http://localhost:39097 --spring.application.name=backend-lab-16-11 --security.jwt.secret=batch16-development-only-secret-change-before-production" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2"><option name="Make" enabled="true" /></method>
+  </configuration>
+</component>

@@ -1,55 +1,92 @@
-# Batch del 16/11: cinco bugs, cinco temas
+# Batch del 16/11 — arrancar la app en IntelliJ
 
-Empieza por el **01**. Los otros cuatro son independientes: puedes elegir el orden.
+El flujo es el habitual: arrancar PostgreSQL, ejecutar las aplicaciones con **Debug**, enviar peticiones desde Swagger o el cliente HTTP y seguir los breakpoints. Mantén abierto este proyecto: `C:\Users\balar\Desktop\36-40k-BATCH-2026-11-16`.
 
-| Ticket | Tema | Problema | Tiempo estimado |
+## 1. PostgreSQL del lote
+
+Desde el terminal de este proyecto:
+
+```powershell
+docker compose -f compose.batch16.yaml up -d --wait
+```
+
+Este Compose solo arranca la base `lab_20261116` en `localhost:35437`, con un volumen propio. El backend y el servicio de envíos se ejecutan desde IntelliJ.
+
+## 2. Configuraciones Application
+
+Ya están guardadas en `.run`. En el selector de arriba deben aparecer **Shipping LAB 16-11** y **Backend LAB 16-11**. Selecciona cada una y pulsa **Debug**. Arranca primero Shipping y después Backend. Son las mismas dos configuraciones para los cinco ejercicios.
+
+Si todavía no aparecen, recarga los archivos del proyecto. También puedes crearlas con **Run → Edit Configurations → + → Application** y estos valores exactos.
+
+### Backend LAB 16-11
+
+| Campo de IntelliJ | Valor |
+| --- | --- |
+| Name | `Backend LAB 16-11` |
+| Main class | `com.acme.operations.BusinessOperationsApplication` |
+| Use classpath of module | `business-operations-backend` |
+| JRE | `C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot` |
+| Working directory | `C:\Users\balar\Desktop\36-40k-BATCH-2026-11-16` |
+| Environment variables | Dejar vacío; los valores van en Program arguments |
+
+**Program arguments** — pega el bloque completo en ese campo, no en VM options:
+
+```text
+--spring.profiles.active=dev --server.address=127.0.0.1 --server.port=38087 --spring.datasource.url=jdbc:postgresql://localhost:35437/lab_20261116 --spring.datasource.username=lab_20261116 --spring.datasource.password=lab_20261116_dev --shipping.base-url=http://localhost:39097 --spring.application.name=backend-lab-16-11 --security.jwt.secret=batch16-development-only-secret-change-before-production
+```
+
+### Shipping LAB 16-11
+
+| Campo de IntelliJ | Valor |
+| --- | --- |
+| Name | `Shipping LAB 16-11` |
+| Main class | `com.acme.shipping.ShippingApplication` |
+| Use classpath of module | `shipping-service` |
+| JRE | `C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot` |
+| Working directory | `C:\Users\balar\Desktop\36-40k-BATCH-2026-11-16\services\shipping-service` |
+| Environment variables | Dejar vacío |
+
+**Program arguments:**
+
+```text
+--server.address=127.0.0.1 --server.port=39097 --spring.application.name=shipping-lab-16-11 --shipping.pricing.flat-cost=7.50 --shipping.pricing.free-threshold=200.00
+```
+
+Si no puedes elegir `shipping-service`, añade `services/shipping-service/pom.xml` como proyecto Maven. Ambas configuraciones usan Java 21, aunque el SDK general de IntelliJ sea otro.
+
+## 3. Abrir la aplicación
+
+- Swagger: http://localhost:38087/swagger-ui/index.html
+- Backend: http://localhost:38087/actuator/health/readiness
+- Shipping: http://localhost:39097/actuator/health/readiness
+- Cotización del primer ejercicio: http://localhost:39097/quotes?orderId=42&amount=200.00
+
+En Swagger ejecuta `POST /api/v1/auth/login` con `{"username":"admin","password":"DevPassword123!"}`. Copia `accessToken` en **Authorize**. Las cuentas `operations` y `readonly` tienen la misma contraseña. El perfil `dev` prepara los usuarios, tres clientes, ocho productos y existencias iniciales.
+
+El archivo [http/batch-2026-11-16.http](http/batch-2026-11-16.http) permite enviar las peticiones desde IntelliJ. Guarda los tokens y el ID del pedido en las respuestas. Para el ejercicio 05, resulta cómodo porque permite enviar la cabecera `X-Request-ID`.
+
+## 4. Elegir ejercicio
+
+| Ticket | Tema | Incidencia | Tiempo estimado |
 | --- | --- | --- | --- |
-| [01](docs/training/2026-11-16/TICKETS.md#01--el-envío-gratis-falla-justo-en-el-límite) | Java: condiciones y dinero | Se cobran 7,50 € de envío a una compra de 200 € | 15–25 min |
-| [02](docs/training/2026-11-16/TICKETS.md#02--se-acepta-un-correo-sin-arroba) | REST: validación de entrada | Se acepta un correo sin arroba | 20–35 min |
-| [03](docs/training/2026-11-16/TICKETS.md#03--operaciones-no-puede-consultar-ventas) | Spring Security: permisos | OPERATIONS recibe 403 al consultar ventas | 30–45 min |
-| [04](docs/training/2026-11-16/TICKETS.md#04--el-listado-dice-que-no-hay-segunda-página) | Colecciones y paginación | Hay 21 resultados, pero se anuncia una sola página de 20 | 20–35 min |
-| [05](docs/training/2026-11-16/TICKETS.md#05--se-pierde-el-identificador-entre-servicios) | HTTP entre servicios: trazabilidad | La cotización llega, pero su identificador de petición se pierde | 35–50 min |
+| 01 | Java y precios | Se cobra envío justo en 200 € | 15–25 min |
+| 02 | Validación REST | Se acepta un correo sin arroba | 20–35 min |
+| 03 | Permisos | OPERATIONS recibe 403 al consultar ventas | 30–45 min |
+| 04 | Paginación | El catálogo anuncia menos páginas de las necesarias | 20–35 min |
+| 05 | Comunicación HTTP | La petición cambia de identificador entre servicios | 35–50 min |
 
-Estimaciones de trabajo por ejercicio; no son un límite. No hace falta terminar la tanda en un día.
+Los pasos completos están en [TICKETS.md](docs/training/2026-11-16/TICKETS.md). Son independientes y puedes empezar por el 01. Los tiempos son estimaciones, no un límite.
 
-## Arranque mínimo
+Pon los breakpoints en el código de **esta carpeta** y usa la petición correspondiente. El primer bug está en el servicio de envíos: debes depurar **Shipping LAB 16-11**. El backend de los demás ejercicios escucha en **38087**.
 
-1. Abre **esta carpeta** en IntelliJ: `C:\Users\balar\Desktop\36-40k-BATCH-2026-11-16`.
-2. Usa JDK 21. Importa `pom.xml` y añade `services/shipping-service/pom.xml` como proyecto Maven.
-3. Desde PowerShell, en esta carpeta, ejecuta:
+## Comprobar tu corrección
+
+Primero repite la petición y comprueba la respuesta. Después puedes ejecutar la prueba de regresión del ticket:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\test-batch-2026-11-16.ps1 -Ticket 01
 ```
 
-La prueba empieza en rojo porque el bug está preparado. Lee el ticket, reproduce el fallo, corrige el código de aplicación y repite el mismo comando. Cambia `01` por `02`, `03`, `04` o `05` para otro ejercicio.
+Sustituye `01` por el ticket elegido, o por `all` al terminar los cinco. Los tests son una comprobación adicional; el ejercicio se trabaja con la app en ejecución. Anota causa, cambio y resultado en [PROGRESO.md](docs/training/2026-11-16/PROGRESO.md).
 
-**No necesitas Docker, PostgreSQL, login, frontend ni arrancar el backend.** Las pruebas preparan sus propios datos en memoria. Cuando hace falta HTTP real, abren un puerto local libre y lo cierran al terminar.
-
-## Depurar sin confundir el backend
-
-Abre la clase de test indicada en el ticket y ejecútala con **Debug**, desde el icono verde junto al método o a la clase. El breakpoint debe estar en el código de **esta copia**. Esa ejecución lanza su propia JVM; no depende de qué backend esté escuchando en 8086 o 38086.
-
-Para el primer ejercicio abre `services/shipping-service/src/test/java/com/acme/shipping/QuoteServiceTest.java` y depura `appliesShippingPolicyAtItsBoundaries`. Observa los casos de la tabla del ticket.
-
-## Qué entregar en cada ejercicio
-
-- Qué respuesta o valor fallaba.
-- La causa y tu cambio de código.
-- La prueba que ahora pasa y un caso que sigue funcionando.
-
-Puedes anotarlo en [PROGRESO.md](docs/training/2026-11-16/PROGRESO.md). No se incluyen soluciones paso a paso. Las aserciones de los tests representan el contrato y deben conservarse.
-
-Al terminar los cinco:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\test-batch-2026-11-16.ps1 -Ticket all
-```
-
-## Aislamiento y evidencia
-
-Rama local: `codex/training-2026-11-16`. Base: `74ccb5e53a06af0c41fe870b8d617586c6038c5d`.
-
-La carpeta `36-40k-APP` y su rama del 12/11 siguen siendo tu trabajo anterior. Esta tanda conserva ese historial. Los ejercicios pendientes del 12/11 no son requisitos para estos cinco, y el comando del batch no ejecuta sus pruebas de integración.
-
-Consulta [VALIDATION.md](docs/training/2026-11-16/VALIDATION.md) para ver las pruebas ejecutadas y su alcance. El estado rojo inicial de esta rama es intencionado; es una rama de entrenamiento local.
+Rama: `codex/training-2026-11-16`. [Evidencia de validación](docs/training/2026-11-16/VALIDATION.md).

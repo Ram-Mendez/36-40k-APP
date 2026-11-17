@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-17",
+  "branch": "codex/training-2026-11-17-b",
+  "backendReadiness": "UP",
+  "swagger": 200,
+  "ticket01": {
+    "firstStatus": 200,
+    "reorderedStatus": 409,
+    "code": "IDEMPOTENCY_CONFLICT"
+  },
+  "ticket02": {
+    "deviceB_after": 401,
+    "logoutA": 204,
+    "deviceB_before": 200
+  },
+  "ticket03": {
+    "completedOrders": 3,
+    "customerId": 4,
+    "expectedOrders": 2,
+    "expectedNetSales": 60,
+    "netSales": 90.0
+  },
+  "ticket04": {
+    "readTimeoutMs": 1000,
+    "durationMs": 1617,
+    "orderStatus": "COMPLETED",
+    "status": 200,
+    "expectedStatus": 503
+  },
+  "ticket05": {
+    "totalPages": 2,
+    "uiCheck": "real Angular service tested separately with HttpTestingController",
+    "apiPage": 1,
+    "elements": 15
+  }
+}

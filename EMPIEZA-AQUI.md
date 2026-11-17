@@ -21,6 +21,8 @@ Si necesitas revisar Program arguments, están en `.run/Backend APP.run.xml` y `
 
 [Ejercicios del 17/11 — segunda tanda](docs/training/2026-11-17-b/TICKETS.md).
 
+Rama preparada: `codex/training-2026-11-17-b`. [Pruebas y reproducciones](docs/training/2026-11-17-b/VALIDATION.md).
+
 La carpeta y las configuraciones se mantienen. `main` conserva la base correcta; la rama de práctica tiene los cinco defectos intencionados. Para cambiar de rama, detén primero las aplicaciones.
 
 [Trabajo guardado, copias y validación](docs/training/CONSOLIDATION-2026-11-17.md).

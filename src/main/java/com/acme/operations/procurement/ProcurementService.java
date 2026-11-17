@@ -165,7 +165,7 @@ public class ProcurementService {
         if (receiptLines.stream().map(ProcurementDtos.ReceiveLine::productId).distinct().count() != receiptLines.size())
             throw bad("DUPLICATE_RECEIPT_PRODUCT", "Each product may appear only once in a receipt");
         String reference = input.deliveryReference().trim();
-        String payloadHash = fingerprint(reference, receiptLines);
+        String payloadHash = fingerprint(reference, input.lines());
         var previous = repository.previousReceipt(id, input.requestId());
         if (previous.isPresent()) {
             if (!previous.get().payloadHash().equals(payloadHash)) throw conflict(

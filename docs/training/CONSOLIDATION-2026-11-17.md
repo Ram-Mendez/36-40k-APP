@@ -13,7 +13,7 @@ Se conserva una sola carpeta de trabajo: `C:\Users\balar\Desktop\36-40k-APP`.
 
 Maven `verify` del núcleo pasó con 52 pruebas unitarias y 105 de integración; Shipping pasó sus 26 pruebas. Pasaron las 29 pruebas del almacén Angular, la comprobación de 70/70 formularios, los dos checks asíncronos del 17 y la compilación/copia del frontend al backend.
 
-Los nuevos contratos de aceptación también se ejecutaron ANTES de introducir los defectos: cuatro comprobaciones Java y dos de Angular, todas verdes. Los dos checks de integración que modifican datos usan PostgreSQL aislado de Testcontainers, sin tocar las bases del usuario.
+Los nuevos contratos de aceptación también se ejecutaron ANTES de introducir los defectos: cuatro comprobaciones Java y dos de Angular, todas verdes. Los tres checks de integración que modifican datos usan PostgreSQL aislado de Testcontainers, sin tocar las bases del usuario.
 
 Las configuraciones estables son `Backend APP` y `Shipping APP`, guardadas en `.run`. Se mantiene un único frontend y un único directorio. La base correcta queda publicada en `main`; los nuevos defectos solo pertenecen a la rama de práctica indicada en EMPIEZA-AQUI.md.
 

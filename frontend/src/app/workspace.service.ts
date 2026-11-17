@@ -101,7 +101,7 @@ export class WorkspaceService {
       content.push(...result.content);
       totalPages = result.totalPages;
       page++;
-    } while (page < totalPages);
+    } while (page < totalPages - 1);
     return content;
   }
 }

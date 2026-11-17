@@ -53,7 +53,7 @@ public class ShippingClient {
                 new JdkClientHttpRequestFactory(
                         HttpClient.newBuilder().connectTimeout(connectTimeout).build());
         // It limits the waiting for a response to prevent the request from remaining pending indefinitely.
-        factory.setReadTimeout(readTimeout);
+        factory.setReadTimeout(connectTimeout);
         // It builds the client; it still doesn't call the remote service.
         var restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
         client = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))

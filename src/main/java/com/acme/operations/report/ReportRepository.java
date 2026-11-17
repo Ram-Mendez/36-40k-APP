@@ -54,6 +54,7 @@ public class ReportRepository {
                         "SELECT"
                             + " c.id,c.name,count(o.id),sum(o.total),sum(coalesce(o.shipping_cost,0))"
                             + " FROM customer c JOIN sales_order o ON o.customer_id=c.id"
+                            + " JOIN order_line l ON l.order_id=o.id"
                                 + filter
                                 + " GROUP BY c.id,c.name ORDER BY sum(o.total) DESC,c.id LIMIT ?"
                                 + " OFFSET ?",

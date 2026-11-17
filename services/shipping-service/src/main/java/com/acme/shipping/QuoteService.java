@@ -8,6 +8,7 @@ import java.math.RoundingMode;
 @Service
 public class QuoteService {
     private final PricingProperties pricing;
+    private final java.util.concurrent.ConcurrentMap<Long, Quote> quotes = new java.util.concurrent.ConcurrentHashMap<>();
 
     public QuoteService(PricingProperties pricing) {
         this.pricing = pricing;
@@ -17,6 +18,10 @@ public class QuoteService {
 
     /** Pure quotation: it does not book a shipment or read the Warehouse database. */
     public Quote quote(long orderId, BigDecimal amount) {
+        return quotes.computeIfAbsent(orderId, key -> calculate(key, amount));
+    }
+
+    private Quote calculate(long orderId, BigDecimal amount) {
         BigDecimal normalized = amount.setScale(2, RoundingMode.UNNECESSARY);
         BigDecimal cost =
                 normalized.compareTo(pricing.freeThreshold()) >= 0

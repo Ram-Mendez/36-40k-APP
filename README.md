@@ -1,6 +1,6 @@
 # business-operations-backend
 
-**November 16 training batch.** Start with [five independent debugging exercises](EMPIEZA-AQUI.md). This local training branch contains five intentional defects; its batch checks initially fail.
+**November 17 training batch.** Start with [five independent debugging exercises](EMPIEZA-AQUI.md). This local training branch contains five intentional defects; its batch checks initially fail.
 
 **Practice V3.** [Startup guide and five support tickets](practica-v3/PRACTICA-V3.md).
 

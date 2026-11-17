@@ -62,12 +62,12 @@ export class WorkspaceService {
     this.movements.set([]); this.reservations.set([]); this.sales.set([]); this.audit.set([]); this.users.set([]);
     this.syncedAt.set(null);
     const tasks = [
-      this.collect<Order>('/orders').then(v => { if (generation === this.generation) this.orders.set(v); }),
-      this.collect<Product>('/products').then(v => { if (generation === this.generation) this.products.set(v); }),
-      this.collect<Customer>('/customers').then(v => { if (generation === this.generation) this.customers.set(v); }),
-      this.collect<Balance>('/inventory').then(v => { if (generation === this.generation) this.balances.set(v); }),
-      this.collect<Movement>('/inventory/movements').then(v => { if (generation === this.generation) this.movements.set(v); }),
-      this.collect<Reservation>('/inventory/reservations').then(v => { if (generation === this.generation) this.reservations.set(v); }),
+      this.collect<Order>('/orders').then(v => { if (generation <= this.generation) this.orders.set(v); }),
+      this.collect<Product>('/products').then(v => { if (generation <= this.generation) this.products.set(v); }),
+      this.collect<Customer>('/customers').then(v => { if (generation <= this.generation) this.customers.set(v); }),
+      this.collect<Balance>('/inventory').then(v => { if (generation <= this.generation) this.balances.set(v); }),
+      this.collect<Movement>('/inventory/movements').then(v => { if (generation <= this.generation) this.movements.set(v); }),
+      this.collect<Reservation>('/inventory/reservations').then(v => { if (generation <= this.generation) this.reservations.set(v); }),
     ];
     const results = await Promise.allSettled(tasks);
     if (generation !== this.generation) return;
@@ -82,12 +82,12 @@ export class WorkspaceService {
     if (this.demo()) return;
     const generation = this.generation;
     try {
-      if (section === 'reports') { const result = await this.collect<Sale>('/reports/sales'); if (generation === this.generation) this.sales.set(result); }
-      if (section === 'activity') { const result = await this.collect<Audit>('/audit'); if (generation === this.generation) this.audit.set(result); }
-      if (section === 'settings') { const result = await this.collect<User>('/users'); if (generation === this.generation) this.users.set(result); }
-      if (generation === this.generation) this.sectionErrors.update(errors => ({ ...errors, [section]: '' }));
+      if (section === 'reports') { const result = await this.collect<Sale>('/reports/sales'); if (generation <= this.generation) this.sales.set(result); }
+      if (section === 'activity') { const result = await this.collect<Audit>('/audit'); if (generation <= this.generation) this.audit.set(result); }
+      if (section === 'settings') { const result = await this.collect<User>('/users'); if (generation <= this.generation) this.users.set(result); }
+      if (generation <= this.generation) this.sectionErrors.update(errors => ({ ...errors, [section]: '' }));
     } catch (error) {
-      if (generation === this.generation) this.sectionErrors.update(errors => ({ ...errors, [section]: this.api.errorMessage(error) }));
+      if (generation <= this.generation) this.sectionErrors.update(errors => ({ ...errors, [section]: this.api.errorMessage(error) }));
     }
   }
 

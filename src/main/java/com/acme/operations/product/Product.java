@@ -38,7 +38,7 @@ public class Product {
     private boolean active = true;
 
     // JPA checks and increments the version on update to detect concurrent changes.
-    @Version private long version;
+    @Column private long version;
 
     // JPA needs this non-parameter builder to rebuild entities from the base.
     protected Product() {}

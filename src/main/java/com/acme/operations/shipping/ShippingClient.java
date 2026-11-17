@@ -29,6 +29,7 @@ public class ShippingClient {
     private static final Logger log = LoggerFactory.getLogger(ShippingClient.class);
     // Reusable HTTP client with already configured base URL and waiting limits.
     private final CarrierApi client;
+    private volatile boolean unavailable;
 
     // DTO: reference and cost received from the external service.
     public record Quote(String reference, BigDecimal cost) {}
@@ -62,6 +63,10 @@ public class ShippingClient {
 
     // It requests a reading-only quotation; this method does not create a real shipment.
     public Quote quote(long orderId, BigDecimal amount) {
+        if (unavailable) {
+            throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "SHIPPING_UNAVAILABLE", "Shipping service unavailable; retry later");
+        }
         // It groups transport and content failures to translate them into a business error.
         try {
             // Recovers the traceability identifier of the current request.
@@ -83,6 +88,7 @@ public class ShippingClient {
             return quote;
         // Translates HTTP or validation errors to a 503; does not make automatic reattempts.
         } catch (RestClientException | IllegalArgumentException ex) {
+            unavailable = true;
             // Record order and type of error for diagnosis.
             log.warn(
                     "Shipping quote failed for order {}: {}",

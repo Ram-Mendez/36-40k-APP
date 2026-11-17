@@ -1,10 +1,10 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Shipping LAB 16-11" type="Application" factoryName="Application">
+  <configuration default="false" name="Shipping LAB 17-11" type="Application" factoryName="Application">
     <option name="ALTERNATIVE_JRE_PATH" value="C:/Program Files/Eclipse Adoptium/jdk-21.0.10.7-hotspot" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.acme.shipping.ShippingApplication" />
     <module name="shipping-service" />
-    <option name="PROGRAM_PARAMETERS" value="--server.address=127.0.0.1 --server.port=39097 --spring.application.name=shipping-lab-16-11 --shipping.pricing.flat-cost=7.50 --shipping.pricing.free-threshold=200.00" />
+    <option name="PROGRAM_PARAMETERS" value="--server.address=127.0.0.1 --server.port=39098 --spring.application.name=shipping-lab-17-11 --shipping.pricing.flat-cost=7.50 --shipping.pricing.free-threshold=200.00" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/services/shipping-service" />
     <method v="2"><option name="Make" enabled="true" /></method>
   </configuration>

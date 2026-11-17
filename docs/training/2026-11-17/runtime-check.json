@@ -1,0 +1,13 @@
+{
+  "backend": "UP",
+  "shipping": "UP",
+  "swagger": 200,
+  "quoteBefore": {
+    "reference": "QUOTE-917001-199.99",
+    "cost": 7.5
+  },
+  "quoteAfterAmountChange": {
+    "reference": "QUOTE-917001-199.99",
+    "cost": 7.5
+  }
+}

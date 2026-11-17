@@ -1,0 +1,135 @@
+@backend = http://localhost:38088
+@shipping = http://localhost:39098
+
+### Login for product and order exercises
+POST {{backend}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"admin","password":"DevPassword123!"}
+
+> {% client.global.set('b17Admin', response.body.accessToken); %}
+
+### 01 - Use new IDs when repeating this sequence without a Shipping restart
+GET {{shipping}}/quotes?orderId=170101&amount=199.99
+
+### 01 - Same ID, new amount
+GET {{shipping}}/quotes?orderId=170101&amount=200.00
+
+### 01 - Independent ID control
+GET {{shipping}}/quotes?orderId=170102&amount=200.00
+
+### 01 - Reverse direction
+GET {{shipping}}/quotes?orderId=170102&amount=199.99
+
+### 02 - Create a separate product, capture the version both editors originally read
+POST {{backend}}/api/v1/products
+Authorization: Bearer {{b17Admin}}
+Content-Type: application/json
+
+{"sku":"B17-{{$timestamp}}","name":"Batch 17 editing","unitPrice":10}
+
+> {% client.global.set('b17Product', response.body.id); client.global.set('b17Sku', response.body.sku); client.global.set('b17OldVersion', response.body.version); %}
+
+### 02 - Editor A saves 20
+PUT {{backend}}/api/v1/products/{{b17Product}}
+Authorization: Bearer {{b17Admin}}
+Content-Type: application/json
+
+{"sku":"{{b17Sku}}","name":"Editor A","unitPrice":20,"version":{{b17OldVersion}}}
+
+### 02 - Editor B submits 30 using the SAME OLD version; must return 409
+PUT {{backend}}/api/v1/products/{{b17Product}}
+Authorization: Bearer {{b17Admin}}
+Content-Type: application/json
+
+{"sku":"{{b17Sku}}","name":"Editor B","unitPrice":30,"version":{{b17OldVersion}}}
+
+### 02 - Confirm persisted result
+GET {{backend}}/api/v1/products/{{b17Product}}
+Authorization: Bearer {{b17Admin}}
+
+### 03 - Independent login; preserve R1
+POST {{backend}}/api/v1/auth/login
+Content-Type: application/json
+
+{"username":"operations","password":"DevPassword123!"}
+
+> {% client.global.set('b17R1', response.body.refreshToken); %}
+
+### 03 - Rotate R1 once
+POST {{backend}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken":"{{b17R1}}"}
+
+> {% client.global.set('b17A2', response.body.accessToken); client.global.set('b17R2', response.body.refreshToken); %}
+
+### 03 - Run before and after the replay: 200 before, 401 after
+GET {{backend}}/api/v1/products
+Authorization: Bearer {{b17A2}}
+
+### 03 - Replay the ORIGINAL R1; expected 401
+POST {{backend}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken":"{{b17R1}}"}
+
+### 03 - Successor access must now be revoked
+GET {{backend}}/api/v1/products
+Authorization: Bearer {{b17A2}}
+
+### 03 - Successor refresh must also be revoked
+POST {{backend}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{"refreshToken":"{{b17R2}}"}
+
+### 04 - Find the seeded customer
+GET {{backend}}/api/v1/customers?search=B28000001
+Authorization: Bearer {{b17Admin}}
+
+> {% client.global.set('b17Customer', response.body.content[0].id); %}
+
+### 04 - Find the stocked product
+GET {{backend}}/api/v1/products?search=GLOVE-100
+Authorization: Bearer {{b17Admin}}
+
+> {% client.global.set('b17Gloves', response.body.content[0].id); %}
+
+### 04 - Create a new order
+POST {{backend}}/api/v1/orders
+Authorization: Bearer {{b17Admin}}
+Content-Type: application/json
+
+{"customerId":{{b17Customer}}}
+
+> {% client.global.set('b17Order', response.body.id); %}
+
+### 04 - Two boxes
+PUT {{backend}}/api/v1/orders/{{b17Order}}/lines/{{b17Gloves}}
+Authorization: Bearer {{b17Admin}}
+Content-Type: application/json
+
+{"quantity":2}
+
+### 04 - Reserve the units
+POST {{backend}}/api/v1/orders/{{b17Order}}/confirm
+Authorization: Bearer {{b17Admin}}
+
+### 04 - Stop Shipping ONLY, send this; start Shipping and send again without restarting Backend
+POST {{backend}}/api/v1/orders/{{b17Order}}/complete
+Authorization: Bearer {{b17Admin}}
+
+### 04 - Shipping health after restart
+GET {{shipping}}/actuator/health/readiness
+
+### 04 - Shipping direct control
+GET {{shipping}}/quotes?orderId=170104&amount=49.80
+
+### 04 - Order must remain confirmed while completion fails
+GET {{backend}}/api/v1/orders/{{b17Order}}
+Authorization: Bearer {{b17Admin}}
+
+### 04 - Stock and reservations before/after successful completion
+GET {{backend}}/api/v1/inventory?productId={{b17Gloves}}
+Authorization: Bearer {{b17Admin}}

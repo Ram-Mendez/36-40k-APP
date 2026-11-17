@@ -18,7 +18,7 @@ public class QuoteService {
 
     /** Pure quotation: it does not book a shipment or read the Warehouse database. */
     public Quote quote(long orderId, BigDecimal amount) {
-        return quotes.computeIfAbsent(orderId, key -> calculate(key, amount));
+        return calculate(orderId, amount);
     }
 
     private Quote calculate(long orderId, BigDecimal amount) {

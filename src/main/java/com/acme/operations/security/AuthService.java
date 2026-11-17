@@ -197,7 +197,7 @@ public class AuthService {
                                         Long.toString(session.userId()),
                                         "Session family revoked");
                                 // It leaves the block without yet to launch: so the revocation is confirmed.
-                                throw unauthorized("REFRESH_REPLAY", "Refresh token rejected");
+                                return new RefreshResult(null, "REFRESH_REPLAY");
                             }
                             // A revoked, expired or inactive user session cannot be renewed.
                             if (session.revoked()

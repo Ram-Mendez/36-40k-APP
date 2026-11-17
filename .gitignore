@@ -7,3 +7,4 @@
 /logs/
 /dist/
 *.log
+/http/http-client.private.env.json

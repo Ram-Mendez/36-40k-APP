@@ -2,7 +2,6 @@ package com.acme.operations.customer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 // These request and response records carry data between the API and the service.

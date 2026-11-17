@@ -8,7 +8,6 @@ import java.math.RoundingMode;
 @Service
 public class QuoteService {
     private final PricingProperties pricing;
-    private final java.util.concurrent.ConcurrentMap<Long, Quote> quotes = new java.util.concurrent.ConcurrentHashMap<>();
 
     public QuoteService(PricingProperties pricing) {
         this.pricing = pricing;

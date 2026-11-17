@@ -1,6 +1,6 @@
 # business-operations-backend
 
-**November 17 training batch.** Start with [five independent debugging exercises](EMPIEZA-AQUI.md). This local training branch contains five intentional defects; its batch checks initially fail.
+**Workspace and current exercises:** [EMPIEZA-AQUI.md](EMPIEZA-AQUI.md). Use the single `36-40k-APP` directory and its stable `Backend APP` / `Shipping APP` configurations.
 
 **Practice V3.** [Startup guide and five support tickets](practica-v3/PRACTICA-V3.md).
 

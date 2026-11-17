@@ -1,0 +1,78 @@
+@base = http://localhost:38088/api/v1
+
+### Login ADMIN for 01, 03 and 04. Choose the "current" environment after preparing data.
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"username":"admin","password":"DevPassword123!"}
+
+> {% client.global.set('currentAdmin', response.body.accessToken); %}
+
+### 01 - First delivery: two units of P and three of Q
+POST {{base}}/purchase-orders/{{purchaseId}}/receipts
+Authorization: Bearer {{currentAdmin}}
+Content-Type: application/json
+
+{"requestId":"{{receiptRequestId}}","deliveryReference":"{{deliveryReference}}","lines":[{"productId":{{productP}},"quantity":2},{"productId":{{productQ}},"quantity":3}]}
+
+### 01 - Same delivery, same UUID, reversed line order: must return the SAME receipt
+POST {{base}}/purchase-orders/{{purchaseId}}/receipts
+Authorization: Bearer {{currentAdmin}}
+Content-Type: application/json
+
+{"requestId":"{{receiptRequestId}}","deliveryReference":"{{deliveryReference}}","lines":[{"productId":{{productQ}},"quantity":3},{"productId":{{productP}},"quantity":2}]}
+
+### 01 - Different quantity, same UUID: must remain 409
+POST {{base}}/purchase-orders/{{purchaseId}}/receipts
+Authorization: Bearer {{currentAdmin}}
+Content-Type: application/json
+
+{"requestId":"{{receiptRequestId}}","deliveryReference":"{{deliveryReference}}","lines":[{"productId":{{productP}},"quantity":4},{"productId":{{productQ}},"quantity":3}]}
+
+### 02 - Log in as operations on device A
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"username":"operations","password":"DevPassword123!"}
+
+> {% client.global.set('deviceA', response.body.accessToken); %}
+
+### 02 - A SECOND LOGIN of the SAME account on device B
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"username":"operations","password":"DevPassword123!"}
+
+> {% client.global.set('deviceB', response.body.accessToken); %}
+
+### 02 - Both devices initially work: run this with deviceA and deviceB
+GET {{base}}/products
+Authorization: Bearer {{deviceB}}
+
+### 02 - Log out device A
+POST {{base}}/auth/logout
+Authorization: Bearer {{deviceA}}
+
+### 02 - Device A must get 401
+GET {{base}}/products
+Authorization: Bearer {{deviceA}}
+
+### 02 - Device B must STILL get 200
+GET {{base}}/products
+Authorization: Bearer {{deviceB}}
+
+### 03 - Find the customer shown by prepare-current-batch.ps1 -Ticket 03
+GET {{base}}/reports/sales?size=100
+Authorization: Bearer {{currentAdmin}}
+
+### 04 - Run with slow-shipping.mjs serving 39098: must return 503 before its 1500 ms response
+POST {{base}}/orders/{{slowOrderId}}/complete
+Authorization: Bearer {{currentAdmin}}
+
+### 04 - While completion fails the order must remain CONFIRMED
+GET {{base}}/orders/{{slowOrderId}}
+Authorization: Bearer {{currentAdmin}}
+
+### 05 - API reveals the second page that Angular must also load
+GET {{base}}/products?page=1&size=100
+Authorization: Bearer {{currentAdmin}}

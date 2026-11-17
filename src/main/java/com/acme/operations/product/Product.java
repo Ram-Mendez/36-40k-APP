@@ -38,7 +38,7 @@ public class Product {
     private boolean active = true;
 
     // JPA checks and increments the version on update to detect concurrent changes.
-    @Version@Column private long version;
+    @Version private long version;
 
     // JPA needs this non-parameter builder to rebuild entities from the base.
     protected Product() {}
@@ -57,7 +57,6 @@ public class Product {
         this.name = input.name().strip();
         // Set two decimals; do not apply a silent rounding if the value does not exactly fit.
         this.unitPrice = input.unitPrice().setScale(2);
-        this.version = input.version() + 1;
     }
 
     // Deactivate the record to keep references from orders and stock movements valid.

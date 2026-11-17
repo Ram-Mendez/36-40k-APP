@@ -2,6 +2,7 @@ package com.acme.operations.customer;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 // These request and response records carry data between the API and the service.
@@ -16,7 +17,7 @@ public final class CustomerDtos {
             // The tax identifier must meet the pattern, it is not enough for it to be a text.
             @NotBlank @Pattern(regexp = "[A-Za-z0-9<>-]{5,32}") String taxId,
             // It requires a non-empty mail, with email format and limited length.
-            @NotBlank @Size(max = 254) String email,
+            @Email @NotBlank @Size(max = 254) String email,
             // Mandatory address with a maximum of 500 characters.
             @NotBlank @Size(max = 500) String address,
             // The version detects concurrent edits. A new record may omit it.

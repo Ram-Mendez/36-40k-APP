@@ -38,7 +38,7 @@ public class ShippingClient {
         @GetExchange("/quotes")
         Quote quote(@RequestParam("orderId") long orderId,
                     @RequestParam("amount") BigDecimal amount,
-                    @RequestHeader(value = "X-Correlation-ID", required = false) String requestId);
+                    @RequestHeader(value = "X-Request-ID", required = false) String requestId);
     }
 
     // Spring passes the URL and the configuration timeouts when building the client.

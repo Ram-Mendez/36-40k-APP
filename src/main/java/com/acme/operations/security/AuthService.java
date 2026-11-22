@@ -246,11 +246,17 @@ public class AuthService {
                     // It blocks the user before mutating sessions, as well as refresh and administration.
                     jdbc.queryForObject(
                             "SELECT id FROM app_user WHERE id=? FOR UPDATE", Long.class, userId);
-                    // Revoke active sessions for the authenticated account and retain their history.
+                    // Find the login family belonging to this session, after acquiring the user lock.
+                    var familyId =
+                            jdbc.queryForObject(
+                                    "SELECT family_id FROM auth_session WHERE id=?",
+                                    UUID.class,
+                                    UUID.fromString(sessionId));
+                    // Revoke this login family, preserving independent logins of the same account.
                     jdbc.update(
                              "UPDATE auth_session SET revoked_at=coalesce(revoked_at,current_timestamp)"
-                                 + " WHERE user_id=? AND used_at IS NULL",
-                             userId);
+                                 + " WHERE family_id=?",
+                             familyId);
                     // Leave the closure record inside the same transaction.
                     audit.record("LOGOUT", "SESSION", sessionId, "Session family revoked");
                 });

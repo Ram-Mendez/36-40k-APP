@@ -1,7 +1,0 @@
-# Desarrollo: PostgreSQL en Docker; ambas aplicaciones en IntelliJ.
-# docker compose -f compose.yaml -f compose.intellij.yaml up -d --wait
-services:
-  shipping-service:
-    profiles: [docker-apps]
-  app:
-    profiles: [docker-apps]

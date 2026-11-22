@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 // Spring Data provides CRUD operations through JpaRepository and filtered queries through
 // JpaSpecificationExecutor.
 public interface ProductRepository
-        extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {}
+        extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+    ProductDtos.View findBySku(String sku);
+}

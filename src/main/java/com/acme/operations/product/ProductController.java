@@ -59,6 +59,14 @@ public class ProductController {
         // Look up the resource by ID. The service reports an error if it is missing.
         return service.get(id);
     }
+    // Handle GET requests by-sku to this route.
+    @Operation(summary = "View a product")
+    @GetMapping("/by-sku/{sku}")
+    // Look up the resource by ID. The service reports an error if it is missing.
+    public ProductDtos.View getBySku(@PathVariable String sku) {
+        // Look up the resource by ID. The service reports an error if it is missing.
+        return service.getBySku(sku);
+    }
 
     // Handle POST requests and delegate the operation to the service.
     @Operation(summary = "Create a product")

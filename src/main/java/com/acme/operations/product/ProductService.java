@@ -170,4 +170,16 @@ public class ProductService {
                                         "PRODUCT_NOT_FOUND",
                                         "Product not found"));
     }
+
+    // Search by SKU.
+    public ProductDtos.View getBySku(String sku) {
+        var product = repository.findBySku(sku);
+        if (product == null) {
+            throw new BusinessException(
+                    HttpStatus.NOT_FOUND,
+                    "SKU_NOT_FOUND",
+                    "SKU not found");
+        }
+        return product;
+    }
 }

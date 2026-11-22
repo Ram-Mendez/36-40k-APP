@@ -161,11 +161,12 @@ public class ProcurementService {
         // The parent row serializes receipts, state transitions and retries for this purchase order.
         var order = repository.header(id, true);
         List<ProcurementDtos.ReceiveLine> receiptLines = input.lines().stream()
-                .sorted(Comparator.comparingLong(ProcurementDtos.ReceiveLine::productId)).toList();
+                .sorted(Comparator.comparingLong(ProcurementDtos.ReceiveLine::productId))
+                .toList();
         if (receiptLines.stream().map(ProcurementDtos.ReceiveLine::productId).distinct().count() != receiptLines.size())
             throw bad("DUPLICATE_RECEIPT_PRODUCT", "Each product may appear only once in a receipt");
         String reference = input.deliveryReference().trim();
-        String payloadHash = fingerprint(reference, input.lines());
+        String payloadHash = fingerprint(reference, receiptLines);
         var previous = repository.previousReceipt(id, input.requestId());
         if (previous.isPresent()) {
             if (!previous.get().payloadHash().equals(payloadHash)) throw conflict(

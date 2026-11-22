@@ -85,6 +85,22 @@ class BillingIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void finalCentSettlesInvoice() throws Exception {
+        Sale sale = sale(2, "10.00");
+        long invoiceId = issue(sale.orderId(), today()).path("id").asLong();
+
+        settle(invoiceId, "payments", "32.49");
+        JsonNode partiallyPaid = invoice(invoiceId);
+        assertThat(partiallyPaid.path("balance").decimalValue()).isEqualByComparingTo("0.01");
+        assertThat(partiallyPaid.path("status").asText()).isEqualTo("PARTIALLY_PAID");
+
+        settle(invoiceId, "payments", "0.01");
+        JsonNode fullyPaid = invoice(invoiceId);
+        assertThat(fullyPaid.path("balance").decimalValue()).isEqualByComparingTo("0.00");
+        assertThat(fullyPaid.path("status").asText()).isEqualTo("SETTLED");
+    }
+
+    @Test
     void receivedGoodsProduceCreditAndRefundWhileOriginalShippingRemainsPaid() throws Exception {
         Sale sale = sale(2, "10.00");
         long invoice = issue(sale.orderId(), today()).path("id").asLong();

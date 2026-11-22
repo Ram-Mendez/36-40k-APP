@@ -51,13 +51,11 @@ public class ReportRepository {
         // Group by customer, sum sales and shipping totals, then sort by sales and ID.
         var rows =
                 jdbc.query(
-                        "SELECT"
-                            + " c.id,c.name,count(o.id),sum(o.total),sum(coalesce(o.shipping_cost,0))"
-                            + " FROM customer c JOIN sales_order o ON o.customer_id=c.id"
-                            + " JOIN order_line l ON l.order_id=o.id"
+                        "SELECT c.id, c.name, count(o.id), sum(o.total), sum(coalesce(o.shipping_cost, 0))"
+                                + " FROM customer c JOIN sales_order o ON o.customer_id = c.id"
                                 + filter
-                                + " GROUP BY c.id,c.name ORDER BY sum(o.total) DESC,c.id LIMIT ?"
-                                + " OFFSET ?",
+                                + " GROUP BY c.id, c.name ORDER BY sum(o.total) DESC, c.id"
+                                + " LIMIT ? OFFSET ?",
                         // Convert SQL aggregates into a sales DTO per customer.
                         (rs, n) ->
                                 new ReportDtos.CustomerSales(

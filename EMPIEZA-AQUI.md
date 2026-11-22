@@ -19,8 +19,14 @@ Si necesitas revisar Program arguments, están en `.run/Backend APP.run.xml` y `
 
 ## Tanda actual
 
-[Ejercicios del 17/11 — segunda tanda](docs/training/2026-11-17-b/TICKETS.md).
+[22/11 · 10 incidencias de Java y PostgreSQL](docs/training/2026-11-22/TICKETS.md).
 
-La carpeta y las configuraciones se mantienen. `main` conserva la base correcta; la rama de práctica tiene los cinco defectos intencionados. Para cambiar de rama, detén primero las aplicaciones.
+Con Backend APP y Shipping APP arrancadas, prepara el primer ejercicio.
 
-[Trabajo guardado, copias y validación](docs/training/CONSOLIDATION-2026-11-17.md).
+```powershell
+node scripts/lab-22.mjs 01 --preparar
+```
+
+Abre `target/lab-22/01.http` en IntelliJ. Después de tu arreglo, reinicia Backend APP y ejecuta `node scripts/lab-22.mjs 01` para comprobarlo.
+
+[Rama de práctica del 17/11](https://github.com/Ram-Mendez/36-40k-APP/tree/codex/training-2026-11-17-b) · [Trabajo guardado y validación anterior](docs/training/CONSOLIDATION-2026-11-17.md).

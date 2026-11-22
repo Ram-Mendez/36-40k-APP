@@ -30,7 +30,7 @@ public class ReplenishmentRepository {
     // Aggregate pending purchases before joining product balances, so each product appears once.
     private static final String PROPOSAL_CTE = """
             WITH pending AS (
-                SELECT l.product_id, SUM(l.quantity-l.received_quantity) AS incoming
+                SELECT l.product_id, SUM(l.quantity) AS incoming
                 FROM purchase_order_line l
                 JOIN purchase_order o ON o.id=l.purchase_order_id
                 WHERE o.status IN ('SUBMITTED','PARTIALLY_RECEIVED')
@@ -60,7 +60,7 @@ public class ReplenishmentRepository {
                     rs.getTimestamp("created_at").toInstant(),rs.getTimestamp("updated_at").toInstant());
 
     private static final RowMapper<ReplenishmentDtos.Proposal> PROPOSAL = (rs, row) -> {
-        Long supplier = rs.getObject("preferred_supplier_id",Long.class);
+        Long supplier = rs.getLong("preferred_supplier_id");
         Boolean supplierActive = rs.getObject("supplier_active",Boolean.class);
         boolean purchasable = supplier != null && Boolean.TRUE.equals(supplierActive);
         String blockingReason = supplier == null ? "NO_PREFERRED_SUPPLIER"

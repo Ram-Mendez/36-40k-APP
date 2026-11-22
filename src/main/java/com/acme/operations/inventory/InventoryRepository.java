@@ -28,7 +28,7 @@ public class InventoryRepository {
                 productId);
         // SELECT FOR UPDATE reads and blocks the row with this productId up to commit or rollback.
         return jdbc.queryForObject(
-                "SELECT on_hand,reserved FROM inventory_balance WHERE product_id=? FOR UPDATE",
+                "SELECT on_hand,reserved FROM inventory_balance WHERE product_id=? FOR UPDATE NOWAIT",
                 // rs represents the row; positions 1 and 2 correspond to on_hand and reserved.
                 (rs, n) -> new LockedBalance(rs.getLong(1), rs.getLong(2)),
                 productId);

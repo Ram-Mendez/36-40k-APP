@@ -168,8 +168,7 @@ public class OrderRepository {
                         productId);
         // Without coincidence, the product is not allowed to be used for this operation.
         if (matches.isEmpty())
-            throw new BusinessException(
-                    HttpStatus.CONFLICT, "PRODUCT_UNAVAILABLE", "Product is missing or inactive");
+            throw new ProductUnavailableException();
         // Returns the monetary price read as BigDecimal.
         return matches.getFirst();
     }
@@ -321,12 +320,14 @@ public class OrderRepository {
         // It keeps the order id next to each line to be able to group them later.
         record OrderLine(long orderId, OrderDtos.Line line) {}
         // Load all the lines of the page into a query, avoiding a query on request.
+        List<Object> lineArgs = new ArrayList<>(headers.stream().map(Header::id).toList());
+        lineArgs.add(size);
         var lineRows =
                 jdbc.query(
                         "SELECT l.*,p.sku,p.name FROM order_line l JOIN product p ON"
                             + " p.id=l.product_id WHERE l.order_id IN ("
                                 + placeholders
-                                + ") ORDER BY l.order_id,l.product_id",
+                                + ") ORDER BY l.order_id,l.product_id LIMIT ?",
                         (rs, n) -> {
                             // Read price and quantity once to calculate the total line.
                             BigDecimal price = rs.getBigDecimal("unit_price");
@@ -345,7 +346,7 @@ public class OrderRepository {
                             return new OrderLine(rs.getLong("order_id"), line);
                         },
                         // The head ids fill in the IN's? in the same order.
-                        headers.stream().map(Header::id).toArray());
+                        lineArgs.toArray());
         // Group lines by orderId to assemble each order.
         Map<Long, List<OrderDtos.Line>> grouped =
                 lineRows.stream()

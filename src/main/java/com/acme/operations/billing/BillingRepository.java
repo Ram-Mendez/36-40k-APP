@@ -31,10 +31,10 @@ public class BillingRepository {
                     sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) AS paid
                 FROM invoice_entry WHERE reversed_at IS NULL GROUP BY invoice_id
             ), balances AS (
-                SELECT i.*, i.product_total+i.shipping_total AS total,
+                SELECT i.*, customer.address AS billing_address, i.product_total+i.shipping_total AS total,
                     coalesce(c.credited,0) AS credited, coalesce(p.paid,0) AS paid,
                     i.product_total+i.shipping_total-coalesce(c.credited,0)-coalesce(p.paid,0) AS balance
-                FROM invoice i
+                FROM invoice i JOIN customer ON customer.id=i.customer_id
                 LEFT JOIN credits c ON c.order_id=i.order_id
                 LEFT JOIN payments p ON p.invoice_id=i.id
             ), ledger AS (
@@ -50,7 +50,7 @@ public class BillingRepository {
             new BillingDtos.Invoice(
                     rs.getLong("id"), "INV-" + rs.getLong("id"), rs.getLong("order_id"),
                     rs.getLong("customer_id"), rs.getString("customer_name"),
-                    rs.getString("customer_tax_id"), rs.getString("customer_address"),
+                    rs.getString("customer_tax_id"), rs.getString("billing_address"),
                     rs.getString("currency"), rs.getBigDecimal("product_total"),
                     rs.getBigDecimal("shipping_total"), rs.getBigDecimal("total"),
                     rs.getBigDecimal("credited"), rs.getBigDecimal("paid"), rs.getBigDecimal("balance"),
@@ -168,7 +168,7 @@ public class BillingRepository {
                     WHEN age<=0 THEN 'NOT_DUE' WHEN age<=30 THEN '1_30'
                     WHEN age<=60 THEN '31_60' WHEN age<=90 THEN '61_90' ELSE 'OVER_90' END AS bucket,
                     count(*) AS count,sum(abs(balance)) AS amount
-                FROM (SELECT balance,cast(? AS date)-due_date AS age FROM ledger
+                FROM (SELECT balance,extract(day FROM age(cast(? AS date),due_date)) AS age FROM ledger
                 """ + where + ") aged GROUP BY bucket";
         var rows = jdbc.query(query, (rs, n) -> new BillingDtos.AgingBucket(
                 rs.getString("bucket"), rs.getLong("count"), rs.getBigDecimal("amount")), args);

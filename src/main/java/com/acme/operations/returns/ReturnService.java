@@ -91,7 +91,7 @@ public class ReturnService {
             long allocated = repository.allocatedQuantity(order.id(), line.productId());
             if (line.quantity() > original.quantity() - allocated)
                 throw conflict("RETURN_QUANTITY_EXCEEDED", "Requested units exceed the remaining returnable quantity");
-            credit = credit.add(original.unitPrice().multiply(BigDecimal.valueOf(line.quantity())));
+            credit = credit.add(original.lineTotal());
         }
         long id = repository.create(order.id(), request.requestId(), fingerprint, reason, credit);
         for (var line : requested)

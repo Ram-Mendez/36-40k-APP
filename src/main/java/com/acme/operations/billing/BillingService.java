@@ -75,7 +75,7 @@ public class BillingService {
         var previous = repository.byRequest(id, request.requestId());
         if (previous.isPresent()) {
             var entry = previous.get();
-            if (!entry.kind().equals(kind) || entry.amount().compareTo(request.amount()) != 0
+            if (!entry.kind().equals(kind) || !entry.amount().equals(request.amount())
                     || !entry.reference().equals(request.reference().strip()))
                 throw conflict("IDEMPOTENCY_CONFLICT", "Request id was already used with different settlement data");
             // A replay never resurrects a reversed entry.

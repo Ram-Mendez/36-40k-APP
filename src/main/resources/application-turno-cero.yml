@@ -1,0 +1,25 @@
+server:
+  address: 127.0.0.1
+  port: 38089
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:35690/turno_cero
+    username: lab_20261117
+    password: lab_20261117_dev
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev,classpath:db/turno-cero
+  web:
+    resources:
+      static-locations: classpath:/dispatch-api-only/
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+security:
+  jwt:
+    secret: ${TURNO_CERO_JWT_SECRET:local-turno-cero-training-key-change-before-production}
+shipping:
+  base-url: http://127.0.0.1:39098
+dispatch:
+  loading-window: 90s

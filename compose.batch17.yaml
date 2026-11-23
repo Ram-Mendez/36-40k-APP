@@ -2,12 +2,13 @@ name: business-operations-batch17
 services:
   postgres:
     image: postgres:16.13-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: lab_20261117
       POSTGRES_USER: lab_20261117
       POSTGRES_PASSWORD: lab_20261117_dev
     ports:
-      - "127.0.0.1:35438:5432"
+      - "127.0.0.1:35690:5432"
     volumes:
       - batch17-data:/var/lib/postgresql/data
     healthcheck:

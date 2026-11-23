@@ -159,7 +159,7 @@ public class OrderService {
 
     // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
     // back on unchecked exceptions.
-    @Transactional(noRollbackFor = ProductUnavailableException.class)
+    @Transactional
     // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     // Confirm the draft and book all its lines as a single transaction.

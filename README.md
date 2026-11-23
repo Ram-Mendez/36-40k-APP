@@ -2,7 +2,7 @@
 
 **Workspace and current exercises:** [EMPIEZA-AQUI.md](EMPIEZA-AQUI.md). Use the single `36-40k-APP` directory and its stable `Backend APP` / `Shipping APP` configurations.
 
-**Practice V3.** [Startup guide and five support tickets](practica-v3/PRACTICA-V3.md).
+**Practice V3.** [Startup guide and five support tickets](docs/practica-v3/PRACTICA-V3.md).
 
 A B2B distribution application for customers, products, inventory, reservations, orders, shipping and auditing. Two Java 21 / Spring Boot 3.5.12 services communicate over REST. The operations backend uses PostgreSQL 16 and serves the Angular application in `frontend/`. The shipping service quotes delivery costs.
 

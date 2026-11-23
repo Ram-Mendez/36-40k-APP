@@ -321,13 +321,12 @@ public class OrderRepository {
         record OrderLine(long orderId, OrderDtos.Line line) {}
         // Load all the lines of the page into a query, avoiding a query on request.
         List<Object> lineArgs = new ArrayList<>(headers.stream().map(Header::id).toList());
-        lineArgs.add(size);
         var lineRows =
                 jdbc.query(
                         "SELECT l.*,p.sku,p.name FROM order_line l JOIN product p ON"
                             + " p.id=l.product_id WHERE l.order_id IN ("
                                 + placeholders
-                                + ") ORDER BY l.order_id,l.product_id LIMIT ?",
+                                + ") ORDER BY l.order_id,l.product_id",
                         (rs, n) -> {
                             // Read price and quantity once to calculate the total line.
                             BigDecimal price = rs.getBigDecimal("unit_price");

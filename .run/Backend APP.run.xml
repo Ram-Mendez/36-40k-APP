@@ -4,7 +4,7 @@
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.acme.operations.BusinessOperationsApplication" />
     <module name="business-operations-backend" />
-    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=dev --server.address=127.0.0.1 --server.port=38088 --spring.datasource.url=jdbc:postgresql://localhost:35438/lab_20261117 --spring.datasource.username=lab_20261117 --spring.datasource.password=lab_20261117_dev --shipping.base-url=http://localhost:39098 --spring.application.name=backend-app --shipping.connect-timeout=5s --shipping.read-timeout=1s --security.jwt.secret=batch17-development-only-secret-change-before-production" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=dev --server.address=127.0.0.1 --server.port=38088 --spring.datasource.url=jdbc:postgresql://localhost:35690/lab_20261117 --spring.datasource.username=lab_20261117 --spring.datasource.password=lab_20261117_dev --shipping.base-url=http://localhost:39098 --spring.application.name=backend-app --shipping.connect-timeout=5s --shipping.read-timeout=1s --security.jwt.secret=batch17-development-only-secret-change-before-production" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2"><option name="Make" enabled="true" /></method>
   </configuration>

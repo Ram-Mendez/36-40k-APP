@@ -12,7 +12,7 @@
 
 ## Arranque desde IntelliJ
 
-1. Abre la carpeta **36-40k-DEBUG-V3** y selecciona **JDK 21**. Carga el `../pom.xml` raíz y el de `services/shipping-service` como proyectos Maven. Esta práctica tiene su propia base de datos.
+1. Abre la carpeta **36-40k-DEBUG-V3** y selecciona **JDK 21**. Carga el `../../pom.xml` raíz y el de `services/shipping-service` como proyectos Maven. Esta práctica tiene su propia base de datos.
 2. Desde la terminal de esa carpeta, ejecuta `docker compose -f compose.autonomia.yaml up -d --wait`. En la ventana Database puedes conectarte a `localhost:25436/autonomia_v3`, usuario `business`, contraseña local `business_dev_only`.
 3. Ejecuta estas dos clases desde la copia V3 con los siguientes **Program arguments**. En ambos casos puedes usar **Debug**.
 

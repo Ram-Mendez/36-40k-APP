@@ -226,7 +226,7 @@ public class ProcurementRepository {
     public void updateReceiptStatus(long id) {
         jdbc.update("""
                 UPDATE purchase_order SET status=CASE WHEN EXISTS(SELECT 1 FROM purchase_order_line
-                WHERE purchase_order_id=? AND received_quantity>0 AND received_quantity<quantity)
+                WHERE purchase_order_id=? AND received_quantity<quantity)
                 THEN 'PARTIALLY_RECEIVED' ELSE 'RECEIVED' END,version=version+1,updated_at=now() WHERE id=?
                 """, id, id);
     }

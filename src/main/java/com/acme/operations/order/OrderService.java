@@ -195,19 +195,12 @@ public class OrderService {
         return repository.get(id);
     }
 
-    // Spring starts or joins a transaction when the call goes through the proxy. It commits on success and rolls
-    // back on unchecked exceptions.
     @Transactional
-    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     // Cancel a draft or a confirmed one; do not delete the request from the history.
     public OrderDtos.Order cancel(long id) {
-        // Lock the order before checking its status so completion cannot run concurrently.
         var order = repository.header(id, true);
-        // The completed or cancelled orders do not support this transition.
-        if (!List.of("DRAFT", "CONFIRMED").contains(order.status()))
-            // It returns a conflict of state without continuing with reservations.
-            throw transitionError(order.status(), "CANCELLED");
+
         // Only the confirmed have reservations to release.
         if (order.status().equals("CONFIRMED"))
             // Check the order products in the stable order of the repository.

@@ -48,19 +48,17 @@ public class Customer {
 
     // It initiates the editable fields from the received DTO; it does not run an INSERT.
     public Customer(CustomerDtos.Input input) {
-        // It reuses the applied standardization also when editing.
         update(input);
     }
 
-    // It modifies contact data; id and version remain under persistence control.
     public void update(CustomerDtos.Input input) {
-        // It eliminates outer spaces from the name.
         this.name = input.name().strip();
         // Norms the tax identifier to compare values consistently.
         this.taxId = input.taxId().strip().toUpperCase(java.util.Locale.ROOT);
-        // Clean out outer spaces of the mail and address.
+        // Clean out outer spaces of the mail.
         this.email = input.email().strip();
         this.address = input.address().strip();
+
     }
 
     // Disable the customer by keeping your line and the orders that refer to it.

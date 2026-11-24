@@ -193,10 +193,11 @@ public class OrderRepository {
 
     // It maintains a line per order and product using that couple's unique key.
     public void setLine(long id, long productId, long quantity, BigDecimal currentPrice) {
-        // In the single key conflict, the line retains its agreed price.
+        // Update the order line when the product is already present.
         jdbc.update(
                 "INSERT INTO order_line(order_id,product_id,quantity,unit_price) VALUES (?,?,?,?)"
-                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET quantity=excluded.quantity",
+                    + " ON CONFLICT(order_id,product_id) DO UPDATE SET"
+                    + " quantity=excluded.quantity,unit_price=excluded.unit_price",
                 id,
                 productId,
                 quantity,

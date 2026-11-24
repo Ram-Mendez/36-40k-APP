@@ -7,3 +7,7 @@ security:
   jwt:
     secret: ${JWT_SECRET:development-only-jwt-key-change-before-production-2026}
   swagger-enabled: true
+springdoc:
+  pre-loading-enabled: true
+  pre-loading-locales:
+    - en

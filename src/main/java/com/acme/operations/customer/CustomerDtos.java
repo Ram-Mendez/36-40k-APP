@@ -17,7 +17,6 @@ public final class CustomerDtos {
             @NotBlank @Pattern(regexp = "[A-Za-z0-9<>-]{5,32}") String taxId,
             // It requires a non-empty mail, with email format and limited length.
             @Email @NotBlank @Size(max = 254) String email,
-            // Mandatory address with a maximum of 500 characters.
             @NotBlank @Size(max = 500) String address,
             // The version detects concurrent edits. A new record may omit it.
             @PositiveOrZero @Schema(description = "Current record version used to detect concurrent changes.") Long version) {}

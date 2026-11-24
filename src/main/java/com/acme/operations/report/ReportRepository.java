@@ -75,8 +75,8 @@ public class ReportRepository {
         // LEFT JOIN includes products without an inventory row. COALESCE gives those products a zero balance.
         String from =
                 " FROM product p LEFT JOIN inventory_balance i ON i.product_id=p.id WHERE"
-                    + " p.active=true AND coalesce(i.on_hand,0)-coalesce(i.reserved,0)<=?";
-        // The same filter counts products available below or equal to the threshold.
+                    + " p.active=true AND coalesce(i.on_hand,0)<=?";
+        // Count products using the same filter as the report rows.
         long total = jdbc.queryForObject("SELECT count(*)" + from, Long.class, threshold);
         // Read each product’s balance and count its reservations.
         var rows =

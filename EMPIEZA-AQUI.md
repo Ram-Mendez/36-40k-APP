@@ -25,6 +25,8 @@ De lunes a viernes, Jenkins mide la actividad a las **08:30** y Codex envía el 
 
 ## Tanda actual
 
+[Diez incidencias de Spring Boot · INC-15 a INC-24](docs/training/2026-11-23/TICKETS-15-24.md). Reinicia **Backend APP** en Debug y usa el Swagger habitual de `38088`.
+
 **Turno Cero · 10 incidentes de Spring Boot.** Ejecuta `powershell -ExecutionPolicy Bypass -File .\scripts\turno-cero.ps1` y arranca **Turno Cero** en Debug. Para reproducir el primer fallo, ejecuta `powershell -ExecutionPolicy Bypass -File .\scripts\comprobar-turno-cero.ps1 -Caso 1`.
 
 ## Tanda anterior

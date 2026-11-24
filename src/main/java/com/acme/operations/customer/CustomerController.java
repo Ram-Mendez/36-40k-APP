@@ -73,16 +73,12 @@ public class CustomerController {
         return ResponseEntity.created(URI.create("/api/v1/customers/" + result.id())).body(result);
     }
 
-    // Handle PUT requests to this route.
     @Operation(summary = "Update a customer")
     @PutMapping("/{id}")
-    // Only ADMIN and OPERATIONS can perform this operation.
     @PreAuthorize("hasAnyRole('ADMIN','OPERATIONS')")
     // The service validates the changes before saving them.
     public CustomerDtos.View update(
-            // Spring reads the ID from the URL and any request body from JSON.
             @PathVariable long id, @Valid @RequestBody CustomerDtos.Input input) {
-        // The service validates the changes before saving them.
         return service.update(id, input);
     }
 

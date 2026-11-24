@@ -68,11 +68,7 @@ public class ProductService {
                                                         .replace("%", "!%")
                                                         .replace("_", "!_")
                                                 + "%";
-                                // It seeks coincidences on behalf of or SKU; it simply matches one of them.
-                                predicates.add(
-                                        cb.or(
-                                                cb.like(cb.lower(root.get("name")), pattern, '!'),
-                                                cb.like(cb.lower(root.get("sku")), pattern, '!')));
+                                predicates.add(cb.like(cb.lower(root.get("name")), pattern, '!'));
                             }
                             // Combine filters with AND; if there are no filters it does not restrict the results.
                             return cb.and(predicates.toArray(Predicate[]::new));

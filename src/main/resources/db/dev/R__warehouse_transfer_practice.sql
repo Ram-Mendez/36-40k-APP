@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS transfer_practice.lot_count (
 
 INSERT INTO transfer_practice.transfer(code, external_reference)
 SELECT code, 'ALB-ORIGINAL' FROM unnest(ARRAY[
-    'TR-25', 'TR-26', 'TR-26-B', 'TR-29', 'TR-31', 'TR-31-B', 'TR-33',
+    'TR-25', 'TR-25-B', 'TR-26', 'TR-26-B', 'TR-26-C', 'TR-29', 'TR-31', 'TR-31-B', 'TR-33',
     'QA-25', 'QA-26', 'QA-29', 'QA-31', 'QA-33'
 ]) AS v(code) ON CONFLICT DO NOTHING;
 

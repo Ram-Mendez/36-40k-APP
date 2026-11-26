@@ -1,11 +1,25 @@
 # INC-27 · Dos partes sin motivo crean dos saldos para el mismo producto
 
-Dificultad estimada **8/10**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+Dificultad estimada **6/10 con la pista de este ticket**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+
+**Pista.** Compara qué pasa si envías dos partes con `reasonCode = PACKAGING` para un SKU de prueba. Revisa qué considera duplicado PostgreSQL en la restricción `UNIQUE (sku, reason_code)` de `transfer_practice.damage_balance`.
 
 El almacén acumula las unidades dañadas por producto y motivo. Cuando el operario desconoce el motivo, todos los partes de ese producto deben acumularse juntos.
 
 1. Ejecuta dos veces `POST /api/v1/warehouse-transfers/damage`. Envía primero `{"sku":"DAÑO-27-A","reasonCode":null,"units":2}` y después el mismo cuerpo con `units = 3`.
 2. Ejecuta `GET /api/v1/warehouse-transfers/damage` con `sku = DAÑO-27-A`.
+3. [
+   {
+   "sku": "DAÑO-27-A",
+   "reasonCode": null,
+   "units": 2
+   },
+   {
+   "sku": "DAÑO-27-A",
+   "reasonCode": null,
+   "units": 3
+   }
+   ]
 
 **Fallo observado.** Los dos POST devuelven 204. El GET devuelve dos filas con `reasonCode = null`, una con 2 unidades y otra con 3.
 

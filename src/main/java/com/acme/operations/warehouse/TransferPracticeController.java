@@ -42,7 +42,8 @@ class TransferPracticeController {
     public ResponseEntity<TransferPracticeDtos.Transfer> transfer(
             @PathVariable String code, WebRequest request) {
         var transfer = service.transfer(code);
-        String etag = "\"" + transfer.code() + "\"";
+        String etag = "\"" + transfer.code() + "-" + transfer.revision() + "\"";
+
         if (request.checkNotModified(etag)) {
             return ResponseEntity.status(304).eTag(etag).build();
         }

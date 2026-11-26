@@ -1,6 +1,8 @@
 # INC-31 · La báscula rechaza el peso cuando cambia el número de decimales
 
-Dificultad estimada **7/10**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+Dificultad estimada **6/10 con la pista de este ticket**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+
+**Pista.** En el depurador, compara el valor y la escala de `kilograms` con el peso que devuelve PostgreSQL. La escala indica cuántos decimales conserva Java.
 
 La báscula confirma el peso previsto del traslado. El peso guardado para el traslado `TR-31` es 12,500 kg. Otra báscula envía el mismo valor con dos decimales.
 

@@ -10,15 +10,16 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Profile("dev & !turno-cero")
 class TransferPracticeService {
     private final JdbcTemplate jdbc;
-    TransferPracticeService(JdbcTemplate jdbc) {
+    private final InspectionHistoryService inspectionHistoryService;
+    TransferPracticeService(JdbcTemplate jdbc, InspectionHistoryService inspectionHistoryService) {
         this.jdbc = jdbc;
+        this.inspectionHistoryService = inspectionHistoryService;
     }
 
     TransferPracticeDtos.Transfer transfer(String code) {
@@ -41,7 +42,7 @@ class TransferPracticeService {
                 && (!reference.isTextual() || reference.asText().length() > 120)) {
             throw invalid("externalReference admite texto de hasta 120 caracteres o null");
         }
-        if (patch.hasNonNull("externalReference")) {
+        if (patch.has("externalReference")) {
             jdbc.update("""
                     UPDATE transfer_practice.transfer
                     SET external_reference = ?, revision = revision + 1
@@ -55,20 +56,12 @@ class TransferPracticeService {
     public void inspect(String code, boolean passed) {
         transfer(code);
         if (!passed) {
-            recordRejectedInspection(code);
+            inspectionHistoryService.recordRejectedInspection(code);
             throw conflict("INSPECTION_REJECTED", "La inspección rechazó el traslado");
         }
         jdbc.update("""
                 INSERT INTO transfer_practice.inspection_attempt(transfer_code, result)
                 VALUES (?, 'ACCEPTED')
-                """, code);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordRejectedInspection(String code) {
-        jdbc.update("""
-                INSERT INTO transfer_practice.inspection_attempt(transfer_code, result)
-                VALUES (?, 'REJECTED')
                 """, code);
     }
 
@@ -115,7 +108,7 @@ class TransferPracticeService {
                 SELECT sku, reason_code, units FROM transfer_practice.damage_balance
                 WHERE sku = ? ORDER BY id
                 """, (rs, row) -> new TransferPracticeDtos.DamageBalance(rs.getString(1),
-                        rs.getString(2), rs.getLong(3)), sku);
+                rs.getString(2), rs.getLong(3)), sku);
     }
 
     @Transactional
@@ -129,10 +122,12 @@ class TransferPracticeService {
                 (rs, row) -> 0, "transfer_practice:" + dock);
         boolean occupied = Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (
-                    SELECT 1 FROM transfer_practice.dock_booking WHERE dock = ?
-                    AND ((starts_at >= ? AND starts_at < ?) OR (ends_at > ? AND ends_at <= ?))
+                    SELECT 1 FROM transfer_practice.dock_booking 
+                             WHERE dock = ?
+                    AND starts_at < ? 
+                               AND ends_at > ?
                 )
-                """, Boolean.class, dock, startAt, endAt, startAt, endAt));
+                """, Boolean.class, dock, endAt, startAt));
         if (occupied) {
             throw conflict("DOCK_OCCUPIED", "El muelle ya está reservado en ese intervalo");
         }
@@ -149,7 +144,7 @@ class TransferPracticeService {
         var jobs = jdbc.query("""
                 SELECT position FROM transfer_practice.picking_job
                 WHERE queue = ? AND status = 'READY'
-                ORDER BY position LIMIT 1 FOR UPDATE
+                ORDER BY position LIMIT 1  FOR UPDATE SKIP LOCKED
                 """, (rs, row) -> rs.getInt(1), queue);
         if (jobs.isEmpty()) {
             throw conflict("NO_READY_JOB", "No hay trabajo listo en la cola");
@@ -170,7 +165,7 @@ class TransferPracticeService {
         if (weights.isEmpty()) {
             throw missing("Traslado no encontrado");
         }
-        if (!weights.getFirst().equals(kilograms)) {
+        if (weights.getFirst().compareTo(kilograms) != 0) {
             throw conflict("WEIGHT_MISMATCH", "El peso no coincide con lo previsto");
         }
         jdbc.update("""
@@ -185,7 +180,7 @@ class TransferPracticeService {
                         FROM transfer_practice.expected_lot l
                         LEFT JOIN transfer_practice.lot_count c ON c.lot = l.lot WHERE l.lot = ?
                         """, (rs, row) -> new TransferPracticeDtos.LotCount(rs.getString("lot"),
-                        rs.getInt("expected_units"), rs.getInt("counted_units")), lot).stream()
+                        rs.getInt("expected_units"), rs.getObject("counted_units", Integer.class)), lot).stream()
                 .findFirst().orElseThrow(() -> missing("Lote no encontrado"));
     }
 

@@ -13,13 +13,13 @@ class TransferRouting {
     record Rule(Predicate<TransferPracticeDtos.ReceiptCondition> matches, String destination) {}
 
     @Bean
-    @Order(20)
+    @Order(10)
     Rule inspectionRoute() {
         return new Rule(TransferPracticeDtos.ReceiptCondition::damaged, "INSPECTION");
     }
 
     @Bean
-    @Order(10)
+    @Order(20)
     Rule coldStorageRoute() {
         return new Rule(TransferPracticeDtos.ReceiptCondition::refrigerated, "COLD_STORAGE");
     }

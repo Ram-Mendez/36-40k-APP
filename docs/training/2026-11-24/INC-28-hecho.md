@@ -1,10 +1,18 @@
 # INC-28 · El muelle acepta un turno dentro de otro
 
-Dificultad estimada **7/10**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+Dificultad estimada **6/10 con la pista de este ticket**. Usa las rutas del grupo **Traslados de almacén** en Swagger.
+
+**Pista.** En el depurador, compara el inicio y el fin de cada reserva. Usa dos ejemplos del ticket: 10:00–11:00 queda dentro de 09:00–12:00 y 12:00–13:00 empieza justo al acabar.
 
 El muelle `DOCK-28` ya está reservado el 2 de diciembre de 09:00 a 12:00 UTC. El almacén permite reservas consecutivas cuando una empieza justo al terminar la anterior.
 
 1. En `POST /api/v1/warehouse-transfers/docks/{dock}/bookings`, usa `dock = DOCK-28` y envía `{"startsAt":"2026-12-02T10:00:00Z","endsAt":"2026-12-02T11:00:00Z"}`.
+   {
+   "id": 19,
+   "dock": "DOCK-28",
+   "startsAt": "2026-12-02T10:00:00Z",
+   "endsAt": "2026-12-02T11:00:00Z"
+   }
 
 **Fallo observado.** El POST devuelve 200 y guarda una segunda reserva dentro de la primera.
 

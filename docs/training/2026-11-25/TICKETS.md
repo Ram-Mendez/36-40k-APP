@@ -4,6 +4,6 @@ Arranca **Backend APP** en Debug desde `36-40k-APP`. Flyway carga los datos en l
 
 | Ticket | Dificultad estimada | Incidencia |
 | --- | --- | --- |
-| [INC-49](INC-49.md) | 6/10 | La báscula descuenta dos veces la tara del palé |
-| [INC-50](INC-50.md) | 6/10 | La etiqueta de frío toma la ruta general |
-| [INC-51](INC-51.md) | 5/10 | La desviación cambia de porcentaje según el sentido del error |
+| [INC-49](INC-49-hecho-26-11-entretenido.md) | 6/10 | La báscula descuenta dos veces la tara del palé |
+| [INC-50](INC-50-hecho26-11-interesante-una-vez-entendido.md) | 6/10 | La etiqueta de frío toma la ruta general |
+| [INC-51](INC-51-hecho-26-11.md) | 5/10 | La desviación cambia de porcentaje según el sentido del error |

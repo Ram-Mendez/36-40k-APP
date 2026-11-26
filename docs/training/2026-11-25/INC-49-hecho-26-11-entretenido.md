@@ -3,10 +3,17 @@
 ## Qué tiene que pasar
 
 El palé lleva dos bultos de 50 y 40 kg. La tara del palé es 12 kg. La API debe descontar una sola tara del total de 90 kg.
+tara = entiendo que es un tipo de tarifa que se aplica al bulto a transportar.
+
 
 ## Reproduce el fallo
 
 En **Controles de almacén**, ejecuta `GET /api/v1/warehouse-controls/pallets/{code}/weight` con `code = PAL-49`. La API devuelve `grossKg = 90`, `tareKg = 12` y `netKg = 66`. El peso neto debería ser 78.
+{
+"grossKg": 90,
+"tareKg": 12,
+"netKg": 66
+}
 
 ## Depura paso a paso
 

@@ -2,11 +2,17 @@
 
 ## Qué tiene que pasar
 
-Una etiqueta puede coincidir con varias reglas. El almacén aplica la regla más específica. La etiqueta `R-04-C-12` pertenece al muelle refrigerado `COLD-BAY-04`.
+Una etiqueta puede coincidir con varias reglas. El almacén aplica la regla más específica. La etiqueta `R-04-C-12`
+pertenece al muelle refrigerado `COLD-BAY-04`.
 
 ## Reproduce el fallo
 
-Ejecuta `GET /api/v1/warehouse-controls/routing/{label}` con `label = R-04-C-12`. La API devuelve `prefix = R` y `destination = GENERAL`.
+Ejecuta `GET /api/v1/warehouse-controls/routing/{label}` con `label = R-04-C-12`.
+{
+"prefix": "R",
+"destination": "GENERAL"
+
+}La API devuelve `prefix = R` y `destination = GENERAL`.
 
 ## Depura paso a paso
 

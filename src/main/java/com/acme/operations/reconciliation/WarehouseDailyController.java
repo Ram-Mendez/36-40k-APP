@@ -32,7 +32,7 @@ class WarehouseDailyController {
     public ResponseEntity<Weight> weight(@PathVariable String code) {
         var result = jdbc.query("""
                 SELECT coalesce(sum(p.gross_kg), 0), c.tare_kg,
-                       coalesce(sum(p.gross_kg - c.tare_kg), 0)
+                       coalesce(sum(p.gross_kg),0) - c.tare_kg
                 FROM warehouse_daily.pallet c
                 LEFT JOIN warehouse_daily.pallet_parcel p ON p.pallet = c.code
                 WHERE c.code = ?
@@ -46,7 +46,7 @@ class WarehouseDailyController {
         var rule = jdbc.query("""
                 SELECT prefix, destination FROM warehouse_daily.route
                 WHERE ? = prefix OR starts_with(?, prefix || '-')
-                ORDER BY length(prefix), prefix LIMIT 1
+                ORDER BY length(prefix) DESC, prefix LIMIT 1
                 """, (rs, row) -> new Route(rs.getString(1), rs.getString(2)), label, label);
         return ResponseEntity.of(rule.stream().findFirst());
     }
@@ -60,7 +60,7 @@ class WarehouseDailyController {
                     int counted = rs.getInt("counted");
                     BigDecimal percent = counted == 0 ? null
                             : BigDecimal.valueOf(100L * Math.abs((long) expected - counted))
-                                    .divide(BigDecimal.valueOf(counted), 2, RoundingMode.HALF_UP);
+                                    .divide(BigDecimal.valueOf(expected), 2, RoundingMode.HALF_UP);
                     return new Discrepancy(expected, counted, percent);
                 }, code);
         return ResponseEntity.of(result.stream().findFirst());

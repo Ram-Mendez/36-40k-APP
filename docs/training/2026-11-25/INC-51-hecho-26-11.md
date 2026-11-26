@@ -6,7 +6,13 @@ El almacén compara todo recuento con el número de unidades previsto. Si espera
 
 ## Reproduce el fallo
 
-Ejecuta `GET /api/v1/warehouse-controls/counts/{code}/discrepancy` con `code = CNT-51`. La API devuelve `expected = 120`, `counted = 90` y `discrepancyPercent = 33.33`. Debería devolver 25.00.
+Ejecuta `GET /api/v1/warehouse-controls/counts/{code}/discrepancy` con `code = CNT-51`. La API devuelve `expected = 120`, `counted = 90` y `discrepancyPercent = 33.33`.
+{
+"expected": 120,
+"counted": 90,
+"discrepancyPercent": 33.33
+}
+Debería devolver 25.00.
 
 ## Depura paso a paso
 
